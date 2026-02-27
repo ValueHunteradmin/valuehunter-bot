@@ -119,7 +119,18 @@ def start(message):
         "👑 ValueHunter Elite\nPremium football value betting system.",
         reply_markup=m
     )
+@bot.callback_query_handler(func=lambda c: c.data == "free")
+def free(c):
 
+    bot.send_message(
+        c.message.chat.id,
+        "⭐ FREE VIP PICK\n\n"
+        "⚽ Match: Ajax vs PSV\n"
+        "🎯 Pick: Over 2.5 Goals\n"
+        "💰 Odds: 1.62\n"
+        "👑 Confidence: HIGH\n\n"
+        "Για πλήρη πρόσβαση ενεργοποίησε VIP 👑"
+    )
 # ================= VIP MENU =================
 
 @bot.callback_query_handler(func=lambda c: c.data == "vip")
