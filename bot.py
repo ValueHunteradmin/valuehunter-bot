@@ -6,7 +6,7 @@ import threading
 import time
 
 # 🔑 ΒΑΛΕ ΤΑ ΔΙΚΑ ΣΟΥ
-TOKEN = os.environ.get("BOT_TOKEN")
+TOKEN = os.environ.get("BOT_TOKENN")
 
 ADMIN_CHANNEL_ID = -1003705705673
 API_KEY = "ZB43Y23-F3E4XKG-K83X2GC-MPAAHZ5"
