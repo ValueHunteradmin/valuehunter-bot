@@ -1,33 +1,28 @@
 from flask import Flask, request
 import telebot
-import os
 
-# 🔑 ΒΑΛΕ ΤΑ ΔΙΚΑ ΣΟΥ
-TOKEN = os.environ.get("BOT_TOKENN")
-
-IPN_SECRET = "vLFBtbQ2EsfCcviI1UbFo3D99EgBYUWP"
+TOKEN = "8767848071:AAHjxT7945VO-X7iCI3kG-0fIqC_giqX7Z8"
 
 bot = telebot.TeleBot(TOKEN)
 
 app = Flask(__name__)
 
-# 👑 WEBHOOK LISTENER
+VIP_USERS = set()
+
+
 @app.route('/payment-webhook', methods=['POST'])
 def payment_webhook():
 
     data = request.json
+    user_id = data.get("order_id")
 
-    # έλεγχος IPN secret
-    if request.headers.get("x-nowpayments-sig"):
-        
-        user_id = data.get("order_id")  # θα βάζουμε telegram id εδώ
+    if user_id:
+        VIP_USERS.add(int(user_id))
 
-        if user_id:
-            bot.send_message(
-                user_id,
-                "👑 Η πληρωμή σου επιβεβαιώθηκε!\n\n"
-                "VIP πρόσβαση ενεργοποιήθηκε."
-            )
+        bot.send_message(
+            int(user_id),
+            "👑 Η πληρωμή σου επιβεβαιώθηκε!\nVIP ενεργοποιήθηκε."
+        )
 
     return "OK"
 
