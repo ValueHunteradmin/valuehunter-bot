@@ -4,7 +4,7 @@ import os
 
 TOKEN = os.environ.get("BOT_TOKEN")
 ADMIN_CHANNEL_ID = -1003705705673
-
+VIP_USERS = set()
 bot = telebot.TeleBot(TOKEN)
 @bot.message_handler(commands=['testadmin'])
 def test_admin(message):
@@ -13,7 +13,7 @@ def test_admin(message):
 # 👑 START MENU
 @bot.message_handler(commands=['start'])
 def start(message):
-
+    VIP_USERS.add(message.chat.id)
     markup = InlineKeyboardMarkup(row_width=2)
 
     buttons = [
@@ -127,5 +127,11 @@ def about(call):
         "Premium football value betting intelligence."
     )
 
-print("ValueHunter Elite Running...")
+print("ValueHunter Elite Running...") 
+@bot.message_handler(commands=['sendvip'])
+def send_vip(message):
+    text = "🔥 TEST VIP BET από ValueHunter"
+
+    for user_id in VIP_USERS:
+        bot.send_message(user_id, text)
 bot.infinity_polling()
