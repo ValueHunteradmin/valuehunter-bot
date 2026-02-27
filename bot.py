@@ -69,7 +69,27 @@ def start(message):
         reply_markup=markup
     )
 
+def create_payment_link(amount, user_id):
 
+    url = "https://api.nowpayments.io/v1/invoice"
+
+    headers = {
+        "x-api-key": "ΒΑΛΕ_NOWPAYMENTS_API_KEY",
+        "Content-Type": "application/json"
+    }
+
+    data = {
+        "price_amount": amount,
+        "price_currency": "eur",
+        "pay_currency": "sol",
+        "order_id": str(user_id),
+        "order_description": "ValueHunter VIP Subscription"
+    }
+
+    response = requests.post(url, json=data, headers=headers)
+    result = response.json()
+
+    return result.get("invoice_url")
 # 💎 VIP PLANS
 @bot.callback_query_handler(func=lambda call: call.data == "vip")
 def vip(call):
