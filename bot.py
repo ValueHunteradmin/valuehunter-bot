@@ -11,6 +11,7 @@ ADMIN_CHANNEL_ID = -1003705705673
 API_KEY = "2f8c79b66ceed85aaf20322308f11e5a"
 
 VIP_USERS = set()
+PENDING_PAYMENTS = set()  # 👈 ΠΡΟΣΘΗΚΗ
 
 bot = telebot.TeleBot(TOKEN)
 
@@ -66,7 +67,6 @@ def create_payment_link(amount, user_id):
 # 👑 START MENU
 @bot.message_handler(commands=['start'])
 def start(message):
-    VIP_USERS.add(message.chat.id)
 
     markup = InlineKeyboardMarkup(row_width=2)
 
@@ -113,23 +113,46 @@ def vip(call):
     )
 
 
-# 💳 PAYMENT HANDLERS
+# 💳 PAYMENT HANDLERS (με pending)
 @bot.callback_query_handler(func=lambda call: call.data == "pay_basic")
 def pay_basic(call):
+    PENDING_PAYMENTS.add(call.message.chat.id)  # 👈 ΠΡΟΣΘΗΚΗ
+
     link = create_payment_link(50, call.message.chat.id)
     bot.send_message(call.message.chat.id, f"💳 Πληρωμή BASIC VIP\n\n🔗 {link}")
 
 
 @bot.callback_query_handler(func=lambda call: call.data == "pay_pro")
 def pay_pro(call):
+    PENDING_PAYMENTS.add(call.message.chat.id)
+
     link = create_payment_link(100, call.message.chat.id)
     bot.send_message(call.message.chat.id, f"💳 Πληρωμή PRO VIP\n\n🔗 {link}")
 
 
 @bot.callback_query_handler(func=lambda call: call.data == "pay_day")
 def pay_day(call):
+    PENDING_PAYMENTS.add(call.message.chat.id)
+
     link = create_payment_link(15, call.message.chat.id)
     bot.send_message(call.message.chat.id, f"💳 Πληρωμή DAY PASS\n\n🔗 {link}")
+
+
+# 🔒 VIP LOCK — BETS
+@bot.callback_query_handler(func=lambda call: call.data == "bets")
+def bets(call):
+
+    if call.message.chat.id not in VIP_USERS:
+        bot.send_message(
+            call.message.chat.id,
+            "🔒 Απαιτείται ενεργή VIP συνδρομή."
+        )
+        return
+
+    bot.send_message(
+        call.message.chat.id,
+        "🔥 VIP BETS θα εμφανιστούν εδώ."
+    )
 
 
 # ⭐ FREE PICK
@@ -147,7 +170,7 @@ def support(call):
     bot.send_message(call.message.chat.id, "💬 Support:\n👉 @MrMasterlegacy1")
 
 
-# 🧠 AUTO REAL BETS
+# 🧠 AUTO REAL BETS — ΜΟΝΟ VIP
 def auto_sender():
 
     sent_today = False
