@@ -1,52 +1,89 @@
 import telebot
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 import requests
-import os
 import threading
 import time
+import sqlite3
 from flask import Flask, request
+
+# ================= CONFIG =================
 
 TOKEN = "8767848071:AAHjxT7945VO-X7iCI3kG-0fIqC_giqX7Z8"
 ADMIN_CHANNEL_ID = -1003705705673
 API_KEY = "2f8c79b66ceed85aaf20322308f11e5a"
-
-VIP_USERS = set()
-PENDING_PAYMENTS = set()  # 👈 ΠΡΟΣΘΗΚΗ
+NOWPAY_API_KEY = "ZB43Y23-F3E4XKG-K83X2GC-MPAAHZ5"
 
 bot = telebot.TeleBot(TOKEN)
 app = Flask(__name__)
-# 🌐 REAL MATCH FETCHER
+
+# ================= DATABASE =================
+
+db = sqlite3.connect("vip.db", check_same_thread=False)
+cursor = db.cursor()
+
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS vip_users (
+    user_id INTEGER PRIMARY KEY,
+    plan TEXT,
+    expire_date INTEGER
+)
+""")
+db.commit()
+
+# ================= VIP FUNCTIONS =================
+
+def add_vip(user_id, plan, days):
+
+    expire = int(time.time()) + days * 86400
+
+    cursor.execute(
+        "INSERT OR REPLACE INTO vip_users VALUES (?,?,?)",
+        (user_id, plan, expire)
+    )
+    db.commit()
+
+def get_plan(user_id):
+
+    cursor.execute("SELECT plan, expire_date FROM vip_users WHERE user_id=?", (user_id,))
+    row = cursor.fetchone()
+
+    if not row:
+        return None
+
+    if row[1] < int(time.time()):
+        cursor.execute("DELETE FROM vip_users WHERE user_id=?", (user_id,))
+        db.commit()
+        return None
+
+    return row[0]
+
+# ================= MATCHES =================
+
 def get_matches():
-
-    url = "https://api-football-v1.p.rapidapi.com/v3/fixtures?next=3"
-
+    url = "https://api-football-v1.p.rapidapi.com/v3/fixtures?next=6"
     headers = {
         "X-RapidAPI-Key": API_KEY,
         "X-RapidAPI-Host": "api-football-v1.p.rapidapi.com"
     }
 
-    response = requests.get(url, headers=headers)
-    data = response.json()
+    r = requests.get(url, headers=headers)
+    data = r.json()
 
     matches = []
-
-    for match in data["response"]:
-        home = match["teams"]["home"]["name"]
-        away = match["teams"]["away"]["name"]
-        league = match["league"]["name"]
-
-        matches.append(f"{home} vs {away} ({league})")
+    for m in data["response"]:
+        matches.append(
+            f"{m['teams']['home']['name']} vs {m['teams']['away']['name']}"
+        )
 
     return matches
 
+# ================= PAYMENTS =================
 
-# 💳 CREATE PAYMENT LINK
-def create_payment_link(amount, user_id):
+def create_payment(amount, user_id):
 
     url = "https://api.nowpayments.io/v1/invoice"
-
     headers = {
-        "x-api-key": "ZB43Y23-F3E4XKG-K83X2GC-MPAAHZ5",
+        "x-api-key": NOWPAY_API_KEY,
         "Content-Type": "application/json"
     }
 
@@ -55,175 +92,155 @@ def create_payment_link(amount, user_id):
         "price_currency": "eur",
         "pay_currency": "sol",
         "order_id": str(user_id),
-        "order_description": "ValueHunter VIP Subscription"
+        "order_description": "ValueHunter VIP"
     }
 
-    response = requests.post(url, json=data, headers=headers)
-    result = response.json()
+    r = requests.post(url, json=data, headers=headers)
+    return r.json().get("invoice_url")
 
-    return result.get("invoice_url")
+# ================= MENU =================
 
-
-# 👑 START MENU
 @bot.message_handler(commands=['start'])
 def start(message):
 
-    markup = InlineKeyboardMarkup(row_width=2)
+    m = InlineKeyboardMarkup(row_width=2)
 
-    buttons = [
-        InlineKeyboardButton("💎 VIP ΠΡΟΣΒΑΣΗ", callback_data="vip"),
-        InlineKeyboardButton("⚡ DAY PASS", callback_data="daypass"),
-        InlineKeyboardButton("🔥 ΣΗΜΕΡΙΝΑ BETS", callback_data="bets"),
-        InlineKeyboardButton("⭐ FREE VIP PICK", callback_data="free"),
-        InlineKeyboardButton("🏆 ΑΠΟΤΕΛΕΣΜΑΤΑ", callback_data="results"),
-        InlineKeyboardButton("📊 ΣΤΑΤΙΣΤΙΚΑ", callback_data="stats"),
+    m.add(
+        InlineKeyboardButton("💎 VIP", callback_data="vip"),
+        InlineKeyboardButton("🔥 BETS", callback_data="bets"),
+        InlineKeyboardButton("⭐ FREE PICK", callback_data="free"),
+        InlineKeyboardButton("📊 RESULTS", callback_data="results"),
         InlineKeyboardButton("🎯 STRATEGY", callback_data="strategy"),
-        InlineKeyboardButton("💬 SUPPORT", callback_data="support"),
-        InlineKeyboardButton("ℹ️ ABOUT", callback_data="about")
-    ]
-
-    markup.add(*buttons)
+        InlineKeyboardButton("💬 SUPPORT", callback_data="support")
+    )
 
     bot.send_message(
         message.chat.id,
-        "👑 Καλώς ήρθες στο ValueHunter Elite\n\n"
-        "Το πιο αποκλειστικό σύστημα εντοπισμού value betting ευκαιριών.",
-        reply_markup=markup
+        "👑 ValueHunter Elite\nPremium football value betting system.",
+        reply_markup=m
     )
 
+# ================= VIP MENU =================
 
-# 💳 VIP PAYMENT MENU
-@bot.callback_query_handler(func=lambda call: call.data == "vip")
-def vip(call):
+@bot.callback_query_handler(func=lambda c: c.data == "vip")
+def vip(c):
 
-    markup = InlineKeyboardMarkup(row_width=1)
+    m = InlineKeyboardMarkup()
 
-    buttons = [
-        InlineKeyboardButton("🥉 Πλήρωσε BASIC VIP — 50€", callback_data="pay_basic"),
-        InlineKeyboardButton("🥇 Πλήρωσε PRO VIP — 100€", callback_data="pay_pro"),
-        InlineKeyboardButton("⚡ Πλήρωσε DAY PASS — 15€", callback_data="pay_day")
-    ]
+    m.add(
+        InlineKeyboardButton("🥉 BASIC — 50€", callback_data="basic"),
+        InlineKeyboardButton("🥇 PRO — 100€", callback_data="pro"),
+        InlineKeyboardButton("⚡ DAY PASS — 15€", callback_data="day")
+    )
 
-    markup.add(*buttons)
+    bot.send_message(c.message.chat.id, "Choose plan:", reply_markup=m)
+
+# ================= PAY BUTTONS =================
+
+@bot.callback_query_handler(func=lambda c: c.data in ["basic","pro","day"])
+def pay(c):
+
+    plans = {
+        "basic": (50, "BASIC", 30),
+        "pro": (100, "PRO", 30),
+        "day": (15, "DAY", 1)
+    }
+
+    price, plan, days = plans[c.data]
+
+    link = create_payment(price, c.message.chat.id)
 
     bot.send_message(
-        call.message.chat.id,
-        "💎 Επίλεξε πακέτο για ενεργοποίηση VIP:",
-        reply_markup=markup
+        c.message.chat.id,
+        f"💳 Pay here:\n{link}\n\nPlan: {plan}"
     )
 
+# ================= VIP LOCK =================
 
-# 💳 PAYMENT HANDLERS (με pending)
-@bot.callback_query_handler(func=lambda call: call.data == "pay_basic")
-def pay_basic(call):
-    PENDING_PAYMENTS.add(call.message.chat.id)  # 👈 ΠΡΟΣΘΗΚΗ
+@bot.callback_query_handler(func=lambda c: c.data == "bets")
+def bets(c):
 
-    link = create_payment_link(50, call.message.chat.id)
-    bot.send_message(call.message.chat.id, f"💳 Πληρωμή BASIC VIP\n\n🔗 {link}")
+    plan = get_plan(c.message.chat.id)
 
-
-@bot.callback_query_handler(func=lambda call: call.data == "pay_pro")
-def pay_pro(call):
-    PENDING_PAYMENTS.add(call.message.chat.id)
-
-    link = create_payment_link(100, call.message.chat.id)
-    bot.send_message(call.message.chat.id, f"💳 Πληρωμή PRO VIP\n\n🔗 {link}")
-
-
-@bot.callback_query_handler(func=lambda call: call.data == "pay_day")
-def pay_day(call):
-    PENDING_PAYMENTS.add(call.message.chat.id)
-
-    link = create_payment_link(15, call.message.chat.id)
-    bot.send_message(call.message.chat.id, f"💳 Πληρωμή DAY PASS\n\n🔗 {link}")
-
-
-# 🔒 VIP LOCK — BETS
-@bot.callback_query_handler(func=lambda call: call.data == "bets")
-def bets(call):
-
-    if call.message.chat.id not in VIP_USERS:
-        bot.send_message(
-            call.message.chat.id,
-            "🔒 Απαιτείται ενεργή VIP συνδρομή."
-        )
+    if not plan:
+        bot.send_message(c.message.chat.id, "🔒 VIP ONLY")
         return
 
-    bot.send_message(
-        call.message.chat.id,
-        "🔥 VIP BETS θα εμφανιστούν εδώ."
-    )
+    bot.send_message(c.message.chat.id, f"🔥 {plan} VIP BETS sent daily")
 
+# ================= FREE =================
 
-# ⭐ FREE PICK
-@bot.callback_query_handler(func=lambda call: call.data == "free")
-def free(call):
-    bot.send_message(
-        call.message.chat.id,
-        "⭐ FREE VIP PICK\n\n⚽ Ajax vs PSV\n🎯 Over 2.5 Goals"
-    )
+@bot.callback_query_handler(func=lambda c: c.data == "free")
+def free(c):
+    bot.send_message(c.message.chat.id, "⭐ FREE PICK")
 
+# ================= SUPPORT =================
 
-# 💬 SUPPORT
-@bot.callback_query_handler(func=lambda call: call.data == "support")
-def support(call):
-    bot.send_message(call.message.chat.id, "💬 Support:\n👉 @MrMasterlegacy1")
+@bot.callback_query_handler(func=lambda c: c.data == "support")
+def support(c):
+    bot.send_message(c.message.chat.id, "@MrMasterlegacy1")
 
-@app.route('/payment-webhook', methods=['POST'])
-def payment_webhook():
+# ================= AUTO BETS =================
 
-    data = request.json
-    user_id = data.get("order_id")
+def auto_bets():
 
-    if user_id:
-        VIP_USERS.add(int(user_id))
-
-        bot.send_message(
-            int(user_id),
-            "👑 Η πληρωμή επιβεβαιώθηκε!\nVIP ενεργοποιήθηκε 🔓"
-        )
-
-    return "OK"
-# 🧠 AUTO REAL BETS — ΜΟΝΟ VIP
-def auto_sender():
-
-    sent_today = False
+    sent = False
 
     while True:
-        current_hour = time.strftime("%H")
 
-        if current_hour == "12" and not sent_today:
+        hour = time.strftime("%H")
+
+        if hour == "12" and not sent:
 
             matches = get_matches()
 
-            for match in matches:
+            for user_id in cursor.execute("SELECT user_id, plan FROM vip_users"):
 
-                text = (
-                    f"🔥 VIP VALUE BET\n\n"
-                    f"⚽ {match}\n"
-                    f"🎯 Market: Over/Under Value\n"
-                    f"👑 Confidence: HIGH"
-                )
+                uid, plan = user_id
 
-                for user_id in VIP_USERS:
-                    bot.send_message(user_id, text)
+                if plan == "BASIC":
+                    bets = matches[:3]
+                else:
+                    bets = matches[:6]
 
-                bot.send_message(ADMIN_CHANNEL_ID, f"ADMIN COPY:\n{text}")
+                for match in bets:
+                    bot.send_message(uid, f"🔥 VIP BET\n⚽ {match}")
 
-            sent_today = True
+            sent = True
 
-        if current_hour == "00":
-            sent_today = False
+        if hour == "00":
+            sent = False
 
         time.sleep(60)
 
+# ================= PAYMENT WEBHOOK =================
 
-# 🚀 START AUTO SYSTEM
-threading.Thread(target=auto_sender, daemon=True).start()
+@app.route('/payment-webhook', methods=['POST'])
+def webhook():
 
-print("ValueHunter Elite Running...")
+    data = request.json
+    user_id = int(data.get("order_id"))
+    amount = float(data.get("price_amount", 0))
+
+    if amount == 50:
+        add_vip(user_id, "BASIC", 30)
+    elif amount == 100:
+        add_vip(user_id, "PRO", 30)
+    elif amount == 15:
+        add_vip(user_id, "DAY", 1)
+
+    bot.send_message(user_id, "👑 VIP ενεργοποιήθηκε!")
+
+    return "OK"
+
+# ================= RUN =================
+
 def run_web():
     app.run(host="0.0.0.0", port=8000)
 
 threading.Thread(target=run_web).start()
+threading.Thread(target=auto_bets).start()
+
+print("ValueHunter GOD MODE Running...")
+
 bot.infinity_polling()
