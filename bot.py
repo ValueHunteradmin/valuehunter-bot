@@ -1,7 +1,8 @@
 import telebot
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
+import os
 
-TOKEN = "ΒΑΛΕ_ΕΔΩ_ΤΟ_BOT_TOKEN"
+TOKEN = os.environ.get("BOT_TOKEN")
 
 bot = telebot.TeleBot(TOKEN)
 
