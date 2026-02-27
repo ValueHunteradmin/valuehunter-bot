@@ -177,4 +177,49 @@ threading.Thread(target=auto_bets, daemon=True).start()
 
 print("ValueHunter Running...")
 
+from flask import Flask, request
+
+app = Flask(__name__)
+
+# ===== ADD VIP =====
+
+def add_vip(user_id, plan, days):
+    expire = int(time.time()) + days * 86400
+    cursor.execute(
+        "INSERT OR REPLACE INTO vip_users VALUES (?,?,?)",
+        (user_id, plan, expire)
+    )
+    db.commit()
+
+# ===== WEBHOOK =====
+
+@app.route('/payment-webhook', methods=['POST'])
+def payment_webhook():
+
+    data = request.json
+
+    user_id = int(data.get("order_id"))
+    amount = float(data.get("price_amount", 0))
+
+    if amount == 50:
+        add_vip(user_id, "BASIC", 30)
+
+    elif amount == 100:
+        add_vip(user_id, "PRO", 30)
+
+    elif amount == 15:
+        add_vip(user_id, "DAY", 1)
+
+    bot.send_message(user_id, "👑 VIP ενεργοποιήθηκε!")
+
+    return "OK"
+
+# ===== RUN WEB SERVER =====
+
+def run_web():
+    port = int(os.environ.get("PORT", 8000))
+    app.run(host="0.0.0.0", port=port)
+
+threading.Thread(target=run_web).start()
+
 bot.infinity_polling()
