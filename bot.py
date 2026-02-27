@@ -6,10 +6,9 @@ import threading
 import time
 
 # 🔑 ΒΑΛΕ ΤΑ ΔΙΚΑ ΣΟΥ
-TOKEN = os.environ.get("BOT_TOKENN")
-
+TOKEN = os.environ.get("BOT_TOKENN")  # FIXED
 ADMIN_CHANNEL_ID = -1003705705673
-API_KEY = "ZB43Y23-F3E4XKG-K83X2GC-MPAAHZ5"
+API_KEY = "2f8c79b66ceed85aaf20322308f11e5a"
 
 VIP_USERS = set()
 
@@ -40,6 +39,30 @@ def get_matches():
     return matches
 
 
+# 💳 CREATE PAYMENT LINK
+def create_payment_link(amount, user_id):
+
+    url = "https://api.nowpayments.io/v1/invoice"
+
+    headers = {
+        "x-api-key": "ΒΑΛΕ_NOWPAYMENTS_API_KEY",
+        "Content-Type": "application/json"
+    }
+
+    data = {
+        "price_amount": amount,
+        "price_currency": "eur",
+        "pay_currency": "sol",
+        "order_id": str(user_id),
+        "order_description": "ValueHunter VIP Subscription"
+    }
+
+    response = requests.post(url, json=data, headers=headers)
+    result = response.json()
+
+    return result.get("invoice_url")
+
+
 # 👑 START MENU
 @bot.message_handler(commands=['start'])
 def start(message):
@@ -64,62 +87,49 @@ def start(message):
     bot.send_message(
         message.chat.id,
         "👑 Καλώς ήρθες στο ValueHunter Elite\n\n"
-        "Το πιο αποκλειστικό σύστημα εντοπισμού value betting ευκαιριών.\n\n"
-        "Η πρόσβαση επιτρέπεται μόνο σε ενεργά μέλη.",
+        "Το πιο αποκλειστικό σύστημα εντοπισμού value betting ευκαιριών.",
         reply_markup=markup
     )
 
-def create_payment_link(amount, user_id):
 
-    url = "https://api.nowpayments.io/v1/invoice"
-
-    headers = {
-        "x-api-key": "ΒΑΛΕ_NOWPAYMENTS_API_KEY",
-        "Content-Type": "application/json"
-    }
-
-    data = {
-        "price_amount": amount,
-        "price_currency": "eur",
-        "pay_currency": "sol",
-        "order_id": str(user_id),
-        "order_description": "ValueHunter VIP Subscription"
-    }
-
-    response = requests.post(url, json=data, headers=headers)
-    result = response.json()
-
-    return result.get("invoice_url")
-# 💎 VIP PLANS
+# 💳 VIP PAYMENT MENU
 @bot.callback_query_handler(func=lambda call: call.data == "vip")
 def vip(call):
+
+    markup = InlineKeyboardMarkup(row_width=1)
+
+    buttons = [
+        InlineKeyboardButton("🥉 Πλήρωσε BASIC VIP — 50€", callback_data="pay_basic"),
+        InlineKeyboardButton("🥇 Πλήρωσε PRO VIP — 100€", callback_data="pay_pro"),
+        InlineKeyboardButton("⚡ Πλήρωσε DAY PASS — 15€", callback_data="pay_day")
+    ]
+
+    markup.add(*buttons)
+
     bot.send_message(
         call.message.chat.id,
-        "💎 VIP ΠΡΟΣΒΑΣΗ\n\n"
-        "🥉 BASIC VIP — 50€ / 30 ημέρες\n"
-        "3 elite bets καθημερινά\n\n"
-        "🥇 PRO VIP ELITE — 100€ / 30 ημέρες\n"
-        "5–6 elite bets καθημερινά"
+        "💎 Επίλεξε πακέτο για ενεργοποίηση VIP:",
+        reply_markup=markup
     )
 
 
-# ⚡ DAY PASS
-@bot.callback_query_handler(func=lambda call: call.data == "daypass")
-def daypass(call):
-    bot.send_message(
-        call.message.chat.id,
-        "⚡ 24H ACCESS — 15€\n\n"
-        "Πλήρης πρόσβαση για 24 ώρες."
-    )
+# 💳 PAYMENT HANDLERS
+@bot.callback_query_handler(func=lambda call: call.data == "pay_basic")
+def pay_basic(call):
+    link = create_payment_link(50, call.message.chat.id)
+    bot.send_message(call.message.chat.id, f"💳 Πληρωμή BASIC VIP\n\n🔗 {link}")
 
 
-# 🔥 VIP BETS
-@bot.callback_query_handler(func=lambda call: call.data == "bets")
-def bets(call):
-    bot.send_message(
-        call.message.chat.id,
-        "🔒 Απαιτείται ενεργή συνδρομή για πρόσβαση."
-    )
+@bot.callback_query_handler(func=lambda call: call.data == "pay_pro")
+def pay_pro(call):
+    link = create_payment_link(100, call.message.chat.id)
+    bot.send_message(call.message.chat.id, f"💳 Πληρωμή PRO VIP\n\n🔗 {link}")
+
+
+@bot.callback_query_handler(func=lambda call: call.data == "pay_day")
+def pay_day(call):
+    link = create_payment_link(15, call.message.chat.id)
+    bot.send_message(call.message.chat.id, f"💳 Πληρωμή DAY PASS\n\n🔗 {link}")
 
 
 # ⭐ FREE PICK
@@ -127,59 +137,17 @@ def bets(call):
 def free(call):
     bot.send_message(
         call.message.chat.id,
-        "⭐ FREE VIP PICK\n\n"
-        "⚽ Ajax vs PSV\n"
-        "🎯 Over 2.5 Goals\n"
-        "👑 Confidence: HIGH"
-    )
-
-
-# 🏆 RESULTS
-@bot.callback_query_handler(func=lambda call: call.data == "results")
-def results(call):
-    bot.send_message(
-        call.message.chat.id,
-        "🏆 VALUEHUNTER RESULTS\n\nWin Rate: 74%\nROI: +18%"
-    )
-
-
-# 📊 STATS
-@bot.callback_query_handler(func=lambda call: call.data == "stats")
-def stats(call):
-    bot.send_message(
-        call.message.chat.id,
-        "📊 VALUEHUNTER STATS\n\nAverage Odds: 1.55\nHit Rate: 72%"
-    )
-
-
-# 🎯 STRATEGY
-@bot.callback_query_handler(func=lambda call: call.data == "strategy")
-def strategy(call):
-    bot.send_message(
-        call.message.chat.id,
-        "🎯 STRATEGY\n\nValue betting σε Over/Under αγορές\nμε advanced models."
+        "⭐ FREE VIP PICK\n\n⚽ Ajax vs PSV\n🎯 Over 2.5 Goals"
     )
 
 
 # 💬 SUPPORT
 @bot.callback_query_handler(func=lambda call: call.data == "support")
 def support(call):
-    bot.send_message(
-        call.message.chat.id,
-        "💬 Support:\n👉 @MrMasterlegacy1"
-    )
+    bot.send_message(call.message.chat.id, "💬 Support:\n👉 @MrMasterlegacy1")
 
 
-# ℹ️ ABOUT
-@bot.callback_query_handler(func=lambda call: call.data == "about")
-def about(call):
-    bot.send_message(
-        call.message.chat.id,
-        "ℹ️ ValueHunter Elite\n\nPremium football value betting intelligence."
-    )
-
-
-# 🧠 AUTO REAL BETS — 3 MATCHES / DAY
+# 🧠 AUTO REAL BETS
 def auto_sender():
 
     sent_today = False
@@ -201,10 +169,7 @@ def auto_sender():
                 )
 
                 for user_id in VIP_USERS:
-                    try:
-                        bot.send_message(user_id, text)
-                    except:
-                        pass
+                    bot.send_message(user_id, text)
 
                 bot.send_message(ADMIN_CHANNEL_ID, f"ADMIN COPY:\n{text}")
 
