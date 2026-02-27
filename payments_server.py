@@ -3,7 +3,7 @@ import telebot
 import os
 
 # 🔑 ΒΑΛΕ ΤΑ ΔΙΚΑ ΣΟΥ
-TOKEN = os.environ.get("8767848071:AAHjxT7945VO-X7iCI3kG-0fIqC_giqX7Z8")
+TOKEN = os.environ.get("BOT_TOKENN")
 
 IPN_SECRET = "vLFBtbQ2EsfCcviI1UbFo3D99EgBYUWP"
 
