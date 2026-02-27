@@ -133,5 +133,22 @@ def send_vip(message):
     text = "🔥 TEST VIP BET από ValueHunter"
 
     for user_id in VIP_USERS:
-        bot.send_message(user_id, text)
+        bot.send_message(user_id, text) 
+        import threading
+import time
+
+def auto_sender():
+    while True:
+        text = "🔥 AUTO VIP BET από ValueHunter"
+
+        for user_id in VIP_USERS:
+            try:
+                bot.send_message(user_id, text)
+            except:
+                pass
+
+        time.sleep(60)  # κάθε 60 δευτερόλεπτα
+
+# ξεκινά το auto system
+threading.Thread(target=auto_sender).start()
 bot.infinity_polling()
