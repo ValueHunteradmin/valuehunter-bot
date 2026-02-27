@@ -3,6 +3,7 @@ from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 import os
 
 TOKEN = os.environ.get("BOT_TOKEN")
+ADMIN_CHANNEL_ID = -1003705705673
 
 bot = telebot.TeleBot(TOKEN)
 
