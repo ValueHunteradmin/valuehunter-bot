@@ -5,6 +5,7 @@ import threading
 import time
 import sqlite3
 from flask import Flask, request
+import os
 
 # ================= CONFIG =================
 
@@ -33,9 +34,7 @@ db.commit()
 # ================= VIP FUNCTIONS =================
 
 def add_vip(user_id, plan, days):
-
     expire = int(time.time()) + days * 86400
-
     cursor.execute(
         "INSERT OR REPLACE INTO vip_users VALUES (?,?,?)",
         (user_id, plan, expire)
@@ -43,7 +42,6 @@ def add_vip(user_id, plan, days):
     db.commit()
 
 def get_plan(user_id):
-
     cursor.execute("SELECT plan, expire_date FROM vip_users WHERE user_id=?", (user_id,))
     row = cursor.fetchone()
 
@@ -57,25 +55,32 @@ def get_plan(user_id):
 
     return row[0]
 
-# ================= MATCHES =================
+# ================= REAL MATCHES (API-SPORTS) =================
 
 def get_matches():
-    url = "https://api-football-v1.p.rapidapi.com/v3/fixtures?next=6"
-    headers = {
-        "X-RapidAPI-Key": API_KEY,
-        "X-RapidAPI-Host": "api-football-v1.p.rapidapi.com"
-    }
+    try:
+        url = "https://v3.football.api-sports.io/fixtures?next=6"
+        headers = {
+            "x-apisports-key": API_KEY
+        }
 
-    r = requests.get(url, headers=headers)
-    data = r.json()
+        r = requests.get(url, headers=headers)
+        data = r.json()
 
-    matches = []
-    for m in data["response"]:
-        matches.append(
-            f"{m['teams']['home']['name']} vs {m['teams']['away']['name']}"
-        )
+        matches = []
 
-    return matches
+        if "response" not in data:
+            return []
+
+        for m in data["response"]:
+            home = m["teams"]["home"]["name"]
+            away = m["teams"]["away"]["name"]
+            matches.append(f"{home} vs {away}")
+
+        return matches
+
+    except:
+        return []
 
 # ================= PAYMENTS =================
 
@@ -119,18 +124,29 @@ def start(message):
         "👑 ValueHunter Elite\nPremium football value betting system.",
         reply_markup=m
     )
+
+# ================= FREE PICK (REAL MATCH) =================
+
 @bot.callback_query_handler(func=lambda c: c.data == "free")
 def free(c):
 
+    matches = get_matches()
+
+    if not matches:
+        bot.send_message(c.message.chat.id, "No matches available")
+        return
+
+    match = matches[0]
+
     bot.send_message(
         c.message.chat.id,
-        "⭐ FREE VIP PICK\n\n"
-        "⚽ Match: Ajax vs PSV\n"
-        "🎯 Pick: Over 2.5 Goals\n"
-        "💰 Odds: 1.62\n"
-        "👑 Confidence: HIGH\n\n"
-        "Για πλήρη πρόσβαση ενεργοποίησε VIP 👑"
+        f"⭐ FREE VIP PICK\n\n"
+        f"⚽ {match}\n"
+        f"🎯 Pick: Over 2.5 Goals\n"
+        f"👑 Confidence: HIGH\n\n"
+        f"Για πλήρη πρόσβαση ενεργοποίησε VIP 👑"
     )
+
 # ================= VIP MENU =================
 
 @bot.callback_query_handler(func=lambda c: c.data == "vip")
@@ -146,7 +162,7 @@ def vip(c):
 
     bot.send_message(c.message.chat.id, "Choose plan:", reply_markup=m)
 
-# ================= PAY BUTTONS =================
+# ================= PAYMENT BUTTONS =================
 
 @bot.callback_query_handler(func=lambda c: c.data in ["basic","pro","day"])
 def pay(c):
@@ -179,12 +195,6 @@ def bets(c):
 
     bot.send_message(c.message.chat.id, f"🔥 {plan} VIP BETS sent daily")
 
-# ================= FREE =================
-
-@bot.callback_query_handler(func=lambda c: c.data == "free")
-def free(c):
-    bot.send_message(c.message.chat.id, "⭐ FREE PICK")
-
 # ================= SUPPORT =================
 
 @bot.callback_query_handler(func=lambda c: c.data == "support")
@@ -205,9 +215,9 @@ def auto_bets():
 
             matches = get_matches()
 
-            for user_id in cursor.execute("SELECT user_id, plan FROM vip_users"):
+            for row in cursor.execute("SELECT user_id, plan FROM vip_users"):
 
-                uid, plan = user_id
+                uid, plan = row
 
                 if plan == "BASIC":
                     bets = matches[:3]
@@ -245,8 +255,6 @@ def webhook():
     return "OK"
 
 # ================= RUN =================
-
-import os
 
 def run_web():
     port = int(os.environ.get("PORT", 8000))
