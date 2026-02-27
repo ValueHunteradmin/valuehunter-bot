@@ -246,8 +246,11 @@ def webhook():
 
 # ================= RUN =================
 
+import os
+
 def run_web():
-    app.run(host="0.0.0.0", port=8000)
+    port = int(os.environ.get("PORT", 8000))
+    app.run(host="0.0.0.0", port=port)
 
 threading.Thread(target=run_web).start()
 threading.Thread(target=auto_bets).start()
