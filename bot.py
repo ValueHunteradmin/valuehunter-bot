@@ -8,7 +8,7 @@ import time
 # 🔑 ΒΑΛΕ ΤΑ ΔΙΚΑ ΣΟΥ
 TOKEN = os.environ.get("BOT_TOKENN")  # FIXED
 ADMIN_CHANNEL_ID = -1003705705673
-API_KEY = "2f8c79b66ceed85aaf20322308f11e5a
+API_KEY = "2f8c79b66ceed85aaf20322308f11e5a"
 
 VIP_USERS = set()
 
@@ -45,7 +45,7 @@ def create_payment_link(amount, user_id):
     url = "https://api.nowpayments.io/v1/invoice"
 
     headers = {
-        "x-api-key": "ΒΑΛΕ_NOWPAYMENTS_API_KEY",
+        "x-api-key": "ZB43Y23-F3E4XKG-K83X2GC-MPAAHZ5",
         "Content-Type": "application/json"
     }
 
