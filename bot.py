@@ -6,6 +6,9 @@ TOKEN = os.environ.get("BOT_TOKEN")
 ADMIN_CHANNEL_ID = -1003705705673
 
 bot = telebot.TeleBot(TOKEN)
+@bot.message_handler(commands=['testadmin'])
+def test_admin(message):
+    bot.send_message(ADMIN_CHANNEL_ID, "🔥 Test message από ValueHunter")
 
 # 👑 START MENU
 @bot.message_handler(commands=['start'])
