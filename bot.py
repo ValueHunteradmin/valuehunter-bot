@@ -4,7 +4,7 @@ import requests
 import os
 import threading
 import time
-
+from flask import Flask, request
 
 TOKEN = "8767848071:AAHjxT7945VO-X7iCI3kG-0fIqC_giqX7Z8"
 ADMIN_CHANNEL_ID = -1003705705673
@@ -14,7 +14,7 @@ VIP_USERS = set()
 PENDING_PAYMENTS = set()  # 👈 ΠΡΟΣΘΗΚΗ
 
 bot = telebot.TeleBot(TOKEN)
-
+app = Flask(__name__)
 # 🌐 REAL MATCH FETCHER
 def get_matches():
 
@@ -169,7 +169,21 @@ def free(call):
 def support(call):
     bot.send_message(call.message.chat.id, "💬 Support:\n👉 @MrMasterlegacy1")
 
+@app.route('/payment-webhook', methods=['POST'])
+def payment_webhook():
 
+    data = request.json
+    user_id = data.get("order_id")
+
+    if user_id:
+        VIP_USERS.add(int(user_id))
+
+        bot.send_message(
+            int(user_id),
+            "👑 Η πληρωμή επιβεβαιώθηκε!\nVIP ενεργοποιήθηκε 🔓"
+        )
+
+    return "OK"
 # 🧠 AUTO REAL BETS — ΜΟΝΟ VIP
 def auto_sender():
 
@@ -208,5 +222,8 @@ def auto_sender():
 threading.Thread(target=auto_sender, daemon=True).start()
 
 print("ValueHunter Elite Running...")
+def run_web():
+    app.run(host="0.0.0.0", port=8000)
 
+threading.Thread(target=run_web).start()
 bot.infinity_polling()
