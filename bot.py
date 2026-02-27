@@ -6,7 +6,7 @@ import threading
 import time
 
 
-TOKEN = os.environ.get("BOT_TOKEN")  # FIXED
+TOKEN = "8767848071:AAHjxT7945VO-X7iCI3kG-0fIqC_giqX7Z8"
 ADMIN_CHANNEL_ID = -1003705705673
 API_KEY = "2f8c79b66ceed85aaf20322308f11e5a"
 
