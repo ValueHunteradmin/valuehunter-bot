@@ -5,7 +5,7 @@ import sqlite3
 import threading
 import time
 import os
-from flask import Flask, request
+from datetime import datetime, timedelta
 
 # ========= CONFIG =========
 
@@ -18,7 +18,6 @@ ODDS_API_KEY = "e55ba3ebd10f1d12494c0c10f1bfdb32"
 NOWPAY_API_KEY = "ZB43Y23-F3E4XKG-K83X2GC-MPAAHZ5"
 
 bot = telebot.TeleBot(TOKEN)
-app = Flask(__name__)
 
 # ========= DATABASE =========
 
@@ -34,18 +33,20 @@ expire INTEGER
 """)
 db.commit()
 
-# ========= VIP SYSTEM =========
+# ========= VIP FUNCTIONS =========
 
 def add_vip(user_id, plan, days):
     expire = int(time.time()) + days * 86400
-    cursor.execute("INSERT OR REPLACE INTO vip_users VALUES (?,?,?)",
-                   (user_id, plan, expire))
+    cursor.execute(
+        "INSERT OR REPLACE INTO vip_users VALUES (?,?,?)",
+        (user_id, plan, expire)
+    )
     db.commit()
 
 def get_plan(user_id):
 
     if user_id == ADMIN_ID:
-        return "PRO"
+        return "ADMIN"
 
     cursor.execute("SELECT plan, expire FROM vip_users WHERE user_id=?", (user_id,))
     row = cursor.fetchone()
@@ -54,123 +55,6 @@ def get_plan(user_id):
         return None
 
     return row[0]
-
-# ========= MATCHES =========
-
-TOP_LEAGUES = [
-    "Premier League","La Liga","Serie A",
-    "Bundesliga","Ligue 1","UEFA Champions League"
-]
-
-def get_matches():
-    url = "https://v3.football.api-sports.io/fixtures?next=10"
-    headers = {"x-apisports-key": FOOTBALL_API_KEY}
-
-    r = requests.get(url, headers=headers).json()
-
-    matches = []
-
-    for m in r.get("response", []):
-        league = m["league"]["name"]
-        if league in TOP_LEAGUES:
-            home = m["teams"]["home"]["name"]
-            away = m["teams"]["away"]["name"]
-            matches.append((f"{home} vs {away}", league))
-
-    return matches
-
-# ========= ODDS =========
-
-def get_odds():
-
-    url = f"https://api.the-odds-api.com/v4/sports/soccer/odds/?apiKey={ODDS_API_KEY}&regions=eu&markets=totals"
-
-    r = requests.get(url).json()
-
-    games = []
-
-    for game in r:
-        home = game["home_team"]
-        away = game["away_team"]
-
-        for bookmaker in game["bookmakers"]:
-
-            for market in bookmaker["markets"]:
-
-                if market["key"] == "totals":
-
-                    for outcome in market["outcomes"]:
-
-                        if outcome["name"] == "Over" and outcome["price"] >= 1.55:
-
-                            games.append(
-                                f"⚽ {home} vs {away}\n"
-                                f"🎯 Over 2.5 @ {outcome['price']}\n"
-                                f"🛡️ Double Chance: 1X\n"
-                                f"👑 Confidence: ELITE"
-                            )
-            break
-
-    return games
-
-# ========= ELITE ANALYSIS =========
-
-def elite_bets():
-
-    matches = get_matches()
-    odds = get_odds()
-
-    picks = []
-
-    for match, league in matches:
-        for odd in odds:
-            if match.split(" vs ")[0] in odd:
-                picks.append(f"🏆 {league}\n{odd}")
-
-    return picks
-
-# ========= AUTO SYSTEM =========
-
-def auto_system():
-
-    sent = False
-
-    while True:
-
-        hour = time.strftime("%H")
-
-        if hour == "11" and not sent:
-
-            bets = elite_bets()
-
-            # VIP USERS
-            for row in cursor.execute("SELECT user_id, plan FROM vip_users"):
-                uid, plan = row
-
-                picks = bets[:3] if plan == "BASIC" else bets[:6]
-
-                for p in picks:
-                    bot.send_message(uid, f"🔥 ELITE VIP BET\n\n{p}")
-
-                # SUPER PICK PRO
-                if plan == "PRO" and bets:
-                    bot.send_message(uid, f"👑 VIP SUPER PICK\n\n{bets[0]}")
-
-            # CHANNEL PICK
-            if bets:
-                bot.send_message(CHANNEL_ID, f"👑 PICK OF THE DAY\n\n{bets[0]}")
-
-            sent = True
-
-        # DAILY REPORT
-        if hour == "23":
-            bot.send_message(CHANNEL_ID,
-                             "🏆 DAILY REPORT\nWins: 3\nLosses: 1\nROI: +22%")
-
-        if hour == "00":
-            sent = False
-
-        time.sleep(60)
 
 # ========= PAYMENT =========
 
@@ -192,30 +76,86 @@ def create_payment(amount, user_id):
     }
 
     r = requests.post(url, json=data, headers=headers)
+
     return r.json().get("invoice_url")
 
-@app.route('/payment-webhook', methods=['POST'])
-def webhook():
+# ========= MATCHES 24H BEFORE =========
 
-    data = request.json
-    user_id = int(data.get("order_id"))
-    amount = float(data.get("price_amount", 0))
+def get_matches_24h():
 
-    if amount == 50:
-        add_vip(user_id, "BASIC", 30)
-    elif amount == 100:
-        add_vip(user_id, "PRO", 30)
-    elif amount == 15:
-        add_vip(user_id, "DAY", 1)
+    tomorrow = (datetime.utcnow() + timedelta(days=1)).strftime("%Y-%m-%d")
 
-    bot.send_message(user_id,
-                     "👑 VIP ACTIVATED\nWelcome to ValueHunter Elite")
+    url = f"https://v3.football.api-sports.io/fixtures?date={tomorrow}"
+    headers = {"x-apisports-key": FOOTBALL_API_KEY}
 
-    return "OK"
+    r = requests.get(url, headers=headers).json()
 
-# ========= MENUS =========
+    matches = []
 
-def main_menu(chat):
+    for m in r.get("response", []):
+        home = m["teams"]["home"]["name"]
+        away = m["teams"]["away"]["name"]
+        league = m["league"]["name"]
+
+        matches.append((home, away, league))
+
+    return matches
+
+# ========= ODDS ANALYSIS =========
+
+def analyze_game(home, away):
+
+    url = f"https://api.the-odds-api.com/v4/sports/soccer/odds/?apiKey={ODDS_API_KEY}&regions=eu&markets=totals,h2h"
+    r = requests.get(url).json()
+
+    for game in r:
+
+        if game["home_team"] == home and game["away_team"] == away:
+
+            for bookmaker in game["bookmakers"]:
+
+                over_odds = None
+                under_odds = None
+
+                for market in bookmaker["markets"]:
+
+                    if market["key"] == "totals":
+                        for outcome in market["outcomes"]:
+                            if outcome["name"] == "Over":
+                                over_odds = outcome["price"]
+                            if outcome["name"] == "Under":
+                                under_odds = outcome["price"]
+
+                if over_odds and over_odds >= under_odds:
+                    market = f"Over 2.5 @ {over_odds}"
+                else:
+                    market = f"Under 2.5 @ {under_odds}"
+
+                return (
+                    f"⚽ {home} vs {away}\n\n"
+                    f"🎯 Main Market: {market}\n"
+                    f"🛡️ Double Chance Insight: 1X\n\n"
+                    f"🧠 Elite Analysis:\n"
+                    f"Tempo models, defensive metrics,\n"
+                    f"and value detection algorithms.\n\n"
+                    f"👑 Confidence: ELITE"
+                )
+
+# ========= START MENU =========
+
+@bot.message_handler(commands=['start'])
+def start(msg):
+
+    text = """👑 Καλώς ήρθες στο ValueHunter Elite🇬🇷  
+
+Το απόλυτο Luxury Value Betting Intelligence System για όσους θέλουν να παίζουν με πλεονέκτημα — όχι με τύχη.  
+
+⚽ Elite Match Intelligence  
+📊 Real Value Detection  
+🏆 Top Leagues Only  
+🎯 Precision Over/Under & Double Chance  
+
+🔒 Η πλήρης πρόσβαση επιτρέπεται μόνο σε ενεργά μέλη."""
 
     m = InlineKeyboardMarkup(row_width=2)
 
@@ -228,16 +168,7 @@ def main_menu(chat):
         InlineKeyboardButton("💬 SUPPORT", callback_data="support")
     )
 
-    bot.send_message(
-        chat,
-        "👑 VALUEHUNTER ELITE\n"
-        "Luxury Football Value Betting Intelligence",
-        reply_markup=m
-    )
-
-@bot.message_handler(commands=['start'])
-def start(msg):
-    main_menu(msg.chat.id)
+    bot.send_message(msg.chat.id, text, reply_markup=m)
 
 # ========= VIP MENU =========
 
@@ -246,31 +177,30 @@ def vip(c):
 
     m = InlineKeyboardMarkup()
 
-    m.add(InlineKeyboardButton("🥉 BASIC VIP — 50€", callback_data="buy_basic"))
-    m.add(InlineKeyboardButton("🥇 PRO VIP ELITE — 100€", callback_data="buy_pro"))
-    m.add(InlineKeyboardButton("⚡ DAY PASS — 15€", callback_data="buy_day"))
-    m.add(InlineKeyboardButton("🔙 BACK", callback_data="back"))
-
-    bot.send_message(
-        c.message.chat.id,
-        "💎 VIP PACKAGES\n\n"
-        "🥉 BASIC — 3 bets daily\n"
-        "🥇 PRO — 5–6 bets + SUPER PICK\n"
-        "⚡ DAY PASS — 24h access",
-        reply_markup=m
+    m.add(
+        InlineKeyboardButton("🥉 BASIC — 50€", callback_data="buy_basic"),
+        InlineKeyboardButton("🥇 PRO — 100€", callback_data="buy_pro"),
+        InlineKeyboardButton("⚡ DAY PASS — 15€", callback_data="buy_day")
     )
 
-@bot.callback_query_handler(func=lambda c: c.data == "back")
-def back(c):
-    main_menu(c.message.chat.id)
+    bot.send_message(c.message.chat.id,
+                     "💎 Επίλεξε VIP πακέτο:",
+                     reply_markup=m)
 
 # ========= BUY =========
 
-@bot.callback_query_handler(func=lambda c: c.data.startswith("buy"))
+@bot.callback_query_handler(func=lambda c: c.data.startswith("buy_"))
 def buy(c):
 
-    prices = {"buy_basic":50,"buy_pro":100,"buy_day":15}
-    link = create_payment(prices[c.data], c.message.chat.id)
+    prices = {
+        "buy_basic": 50,
+        "buy_pro": 100,
+        "buy_day": 15
+    }
+
+    amount = prices[c.data]
+
+    link = create_payment(amount, c.message.chat.id)
 
     bot.send_message(c.message.chat.id,
                      f"💳 Πλήρωσε εδώ:\n{link}")
@@ -280,14 +210,12 @@ def buy(c):
 @bot.callback_query_handler(func=lambda c: c.data == "free")
 def free(c):
 
-    picks = elite_bets()
+    matches = get_matches_24h()
 
-    if picks:
+    if matches:
+        analysis = analyze_game(matches[0][0], matches[0][1])
         bot.send_message(c.message.chat.id,
-                         f"⭐ FREE VIP PICK\n\n{picks[0]}")
-    else:
-        bot.send_message(c.message.chat.id,
-                         "Analyzing matches...")
+                         f"⭐ FREE VIP PICK\n\n{analysis}")
 
 # ========= VIP BETS =========
 
@@ -297,46 +225,57 @@ def bets(c):
     plan = get_plan(c.message.chat.id)
 
     if not plan:
-        bot.send_message(c.message.chat.id,
-                         "🔒 VIP ONLY")
+        bot.send_message(c.message.chat.id, "🔒 VIP ONLY")
         return
 
     bot.send_message(c.message.chat.id,
-                     f"🔥 {plan} VIP ACTIVE")
+                     f"🔥 {plan} VIP BETS sent automatically")
 
-# ========= RESULTS =========
+# ========= AUTO SYSTEM =========
 
-@bot.callback_query_handler(func=lambda c: c.data == "results")
-def results(c):
+def auto_bets():
 
-    bot.send_message(c.message.chat.id,
-                     "🏆 Win Rate: 74%\nROI: +18%")
+    sent_today = False
 
-# ========= STRATEGY =========
+    while True:
 
-@bot.callback_query_handler(func=lambda c: c.data == "strategy")
-def strategy(c):
+        hour = time.strftime("%H")
 
-    bot.send_message(c.message.chat.id,
-                     "🎯 Advanced Over/Under Models\nTop leagues only.")
+        if hour == "12" and not sent_today:
 
-# ========= SUPPORT =========
+            matches = get_matches_24h()
 
-@bot.callback_query_handler(func=lambda c: c.data == "support")
-def support(c):
+            # ADMIN gets 8 bets
+            for m in matches[:8]:
+                analysis = analyze_game(m[0], m[1])
+                if analysis:
+                    bot.send_message(ADMIN_ID,
+                                     f"👑 ADMIN ELITE BET\n\n{analysis}")
 
-    bot.send_message(c.message.chat.id,
-                     "💬 Support:\n👉 @MrMasterlegacy1")
+            # VIP USERS
+            for row in cursor.execute("SELECT user_id, plan FROM vip_users"):
+
+                uid, plan = row
+
+                bets = matches[:3] if plan == "BASIC" else matches[:5]
+
+                for m in bets:
+                    analysis = analyze_game(m[0], m[1])
+                    if analysis:
+                        bot.send_message(uid,
+                                         f"🔥 VIP BET\n\n{analysis}")
+
+            sent_today = True
+
+        if hour == "00":
+            sent_today = False
+
+        time.sleep(60)
 
 # ========= RUN =========
 
-def run_web():
-    port = int(os.environ.get("PORT", 8000))
-    app.run(host="0.0.0.0", port=port)
+threading.Thread(target=auto_bets, daemon=True).start()
 
-threading.Thread(target=auto_system, daemon=True).start()
-threading.Thread(target=run_web).start()
-
-print("VALUEHUNTER ELITE ULTRA RUNNING")
+print("VALUEHUNTER ELITE RUNNING")
 
 bot.infinity_polling()
