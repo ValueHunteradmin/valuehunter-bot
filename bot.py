@@ -5,23 +5,34 @@ import sqlite3
 import threading
 import time
 from datetime import datetime, timedelta
+from flask import Flask, request, abort
+import os
+import hmac
+import hashlib
 
-# ========= CONFIG =========
+# ================= CONFIG =================
 
 TOKEN = "8767848071:AAHjxT7945VO-X7iCI3kG-0fIqC_giqX7Z8"
 ADMIN_ID = 8328070177
-CHANNEL_ID = -1003705705673
 
 FOOTBALL_API_KEY = "2f8c79b66ceed85aaf20322308f11e5a"
 ODDS_API_KEY = "e55ba3ebd10f1d12494c0c10f1bfdb32"
 NOWPAY_API_KEY = "ZB43Y23-F3E4XKG-K83X2GC-MPAAHZ5"
+NOWPAY_IPN_SECRET = "c499iDAdX1fyUeQ+eahI77PsZ3Kg8gAe"
 
-bot = telebot.TeleBot(TOKEN)
+VIP_LIMIT = 150
 
-# ========= DATABASE =========
+WEBHOOK_URL = "https://valuehunter-bot-production.up.railway.app/payment-webhook"
+
+bot = telebot.TeleBot(TOKEN, parse_mode="HTML")
+app = Flask(__name__)
+
+# ================= DATABASE =================
 
 db = sqlite3.connect("vip.db", check_same_thread=False)
 cursor = db.cursor()
+
+cursor.execute("PRAGMA journal_mode=WAL")
 
 cursor.execute("""
 CREATE TABLE IF NOT EXISTS vip_users(
@@ -30,33 +41,64 @@ plan TEXT,
 expire INTEGER
 )
 """)
-db.commit()
 
-# ========= VIP SYSTEM =========
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS pending_payments(
+user_id INTEGER PRIMARY KEY,
+created INTEGER
+)
+""")
+
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS verified_payments(
+user_id INTEGER PRIMARY KEY
+)
+""")
+
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS sent_matches(
+key TEXT PRIMARY KEY
+)
+""")
+
+db.commit()
+db_lock = threading.Lock()
+
+# ================= SAFE SEND =================
+
+def safe_send(uid, text):
+    try:
+        bot.send_message(uid, text)
+    except:
+        pass
+
+# ================= VIP FUNCTIONS =================
 
 def add_vip(user_id, plan, days):
     expire = int(time.time()) + days * 86400
-    cursor.execute(
-        "INSERT OR REPLACE INTO vip_users VALUES (?,?,?)",
-        (user_id, plan, expire)
-    )
-    db.commit()
+    with db_lock:
+        cursor.execute("INSERT OR REPLACE INTO vip_users VALUES (?,?,?)",
+                       (user_id, plan, expire))
+        db.commit()
 
-def get_plan(user_id):
-    if user_id == ADMIN_ID:
-        return "ADMIN"
+def vip_count():
+    now = int(time.time())
+    with db_lock:
+        cursor.execute("SELECT COUNT(*) FROM vip_users WHERE expire > ?", (now,))
+        return cursor.fetchone()[0]
 
-    cursor.execute("SELECT plan, expire FROM vip_users WHERE user_id=?", (user_id,))
-    row = cursor.fetchone()
-
-    if not row or row[1] < int(time.time()):
-        return None
-
-    return row[0]
-
-# ========= PAYMENTS =========
+# ================= PAYMENT =================
 
 def create_payment(amount, user_id):
+
+    if vip_count() >= VIP_LIMIT:
+        return None
+
+    with db_lock:
+        cursor.execute("INSERT OR REPLACE INTO pending_payments VALUES (?,?)",
+                       (user_id, int(time.time())))
+        db.commit()
+
     url = "https://api.nowpayments.io/v1/invoice"
     headers = {
         "x-api-key": NOWPAY_API_KEY,
@@ -66,250 +108,170 @@ def create_payment(amount, user_id):
     data = {
         "price_amount": amount,
         "price_currency": "eur",
-        "pay_currency": "sol",
         "order_id": str(user_id),
-        "order_description": "ValueHunter VIP"
+        "order_description": "ValueHunter VIP",
+        "ipn_callback_url": WEBHOOK_URL
     }
 
-    r = requests.post(url, json=data, headers=headers)
+    r = requests.post(url, json=data, headers=headers, timeout=20)
+
     return r.json().get("invoice_url")
 
-# ========= MATCHES 24H =========
+# ================= WEBHOOK VERIFICATION =================
 
-def get_matches_24h():
-    tomorrow = (datetime.utcnow() + timedelta(days=1)).strftime("%Y-%m-%d")
-    url = f"https://v3.football.api-sports.io/fixtures?date={tomorrow}"
-    headers = {"x-apisports-key": FOOTBALL_API_KEY}
+def verify_nowpayments_signature(request):
+    signature = request.headers.get("x-nowpayments-sig")
+    if not signature:
+        return False
 
-    r = requests.get(url, headers=headers).json()
+    body = request.data
+    generated = hmac.new(
+        NOWPAY_IPN_SECRET.encode(),
+        body,
+        hashlib.sha512
+    ).hexdigest()
 
-    matches = []
-    for m in r.get("response", []):
-        matches.append((m["teams"]["home"]["name"], m["teams"]["away"]["name"]))
-    return matches
+    return hmac.compare_digest(generated, signature)
 
-# ========= ANALYSIS =========
+# ================= PAYMENT WEBHOOK =================
 
-def analyze_game(home, away):
+@app.route('/payment-webhook', methods=['POST'])
+def payment_webhook():
 
-    url = f"https://api.the-odds-api.com/v4/sports/soccer/odds/?apiKey={ODDS_API_KEY}&regions=eu&markets=totals,h2h"
-    r = requests.get(url).json()
+    if not verify_nowpayments_signature(request):
+        abort(403)
 
-    for game in r:
-        if game["home_team"] == home and game["away_team"] == away:
+    data = request.json
+    status = data.get("payment_status")
+    user_id = int(data.get("order_id", 0))
+    amount = float(data.get("price_amount", 0))
 
-            over = under = None
+    with db_lock:
+        row = cursor.execute("SELECT created FROM pending_payments WHERE user_id=?", (user_id,)).fetchone()
 
-            for bookmaker in game["bookmakers"]:
-                for market in bookmaker["markets"]:
-                    if market["key"] == "totals":
-                        for o in market["outcomes"]:
-                            if o["name"] == "Over":
-                                over = o["price"]
-                            if o["name"] == "Under":
-                                under = o["price"]
+    if not row:
+        return "UNKNOWN ORDER"
 
-            if over and under:
-                main = f"Over 2.5 @ {over}" if over >= under else f"Under 2.5 @ {under}"
+    if time.time() - row[0] > 7200:
+        return "EXPIRED ORDER"
 
-                return f"""
-⚽ {home} vs {away}
+    if status != "finished":
+        return "IGNORED"
 
-🎯 Main Market: {main}
-🛡️ Double Chance Insight: 1X
+    with db_lock:
+        if cursor.execute("SELECT 1 FROM verified_payments WHERE user_id=?", (user_id,)).fetchone():
+            return "ALREADY VERIFIED"
 
-🧠 Elite Analysis:
-Advanced tempo models
-Defensive metrics
-Market inefficiency detection
+        cursor.execute("INSERT INTO verified_payments VALUES (?)", (user_id,))
+        cursor.execute("DELETE FROM pending_payments WHERE user_id=?", (user_id,))
+        db.commit()
 
-👑 Confidence: ELITE
-"""
+    if abs(amount - 50) < 1:
+        add_vip(user_id, "BASIC", 30)
+    elif abs(amount - 100) < 1:
+        add_vip(user_id, "PRO", 30)
+    elif abs(amount - 15) < 1:
+        add_vip(user_id, "PRO", 1)
+    else:
+        return "UNKNOWN AMOUNT"
 
-# ========= START =========
+    safe_send(user_id,
+        "👑 VIP ενεργοποιήθηκε!\nΤα bets θα αποστέλλονται καθημερινά.")
+
+    return "OK"
+
+# ================= AUTO BETS =================
+
+def auto_bets():
+
+    last_day = None
+
+    while True:
+
+        now = datetime.utcnow()
+
+        if now.hour == 12 and last_day != now.day:
+
+            with db_lock:
+                users = cursor.execute(
+                    "SELECT user_id, plan FROM vip_users WHERE expire > ?",
+                    (int(time.time()),)
+                ).fetchall()
+
+            for uid, plan in users:
+
+                key = f"{uid}-{now.day}"
+
+                with db_lock:
+                    if cursor.execute("SELECT 1 FROM sent_matches WHERE key=?", (key,)).fetchone():
+                        continue
+                    cursor.execute("INSERT INTO sent_matches VALUES (?)", (key,))
+                    db.commit()
+
+                safe_send(uid, "🔥 VIP BET σήμερα διαθέσιμο.")
+
+            last_day = now.day
+
+        time.sleep(60)
+
+# ================= BUTTONS =================
+
+@bot.callback_query_handler(func=lambda c: c.data == "vip")
+def vip_menu(c):
+
+    m = InlineKeyboardMarkup()
+
+    m.add(InlineKeyboardButton("🥉 BASIC — 50€", callback_data="basic"))
+    m.add(InlineKeyboardButton("🥇 PRO — 100€", callback_data="pro"))
+    m.add(InlineKeyboardButton("⚡ DAY PASS — 15€", callback_data="day"))
+
+    bot.send_message(c.message.chat.id,
+                     "👑 VIP ΠΑΚΕΤΑ",
+                     reply_markup=m)
+
+@bot.callback_query_handler(func=lambda c: c.data in ["basic","pro","day"])
+def buy(c):
+
+    prices = {"basic":50, "pro":100, "day":15}
+
+    link = create_payment(prices[c.data], c.message.chat.id)
+
+    if not link:
+        bot.send_message(c.message.chat.id,
+                         "🚫 Οι VIP θέσεις έχουν καλυφθεί.")
+        return
+
+    bot.send_message(c.message.chat.id,
+                     f"💳 Πλήρωσε εδώ:\n{link}")
+
+# ================= MENU =================
+
+def main_menu():
+    m = InlineKeyboardMarkup(row_width=2)
+    m.add(
+        InlineKeyboardButton("💎 VIP", callback_data="vip"),
+    )
+    return m
 
 @bot.message_handler(commands=['start'])
 def start(msg):
 
-    text = """👑 ValueHunter Elite — Private Members Edition
+    seats_left = VIP_LIMIT - vip_count()
 
- 👑 Καλώς ήρθες στο ValueHunter Elite — Private Members Edition
+    text = f"""🏛️ VALUEHUNTER ELITE
 
-Δεν πρόκειται για δημόσιο tipster bot.
+⚠️ Διαθέσιμες VIP θέσεις: {seats_left}/{VIP_LIMIT}
+🔒 Πρόσβαση μόνο σε ενεργά μέλη."""
 
-Είναι ένα κλειστό σύστημα για περιορισμένο αριθμό παικτών που θέλουν να παίζουν με πλεονέκτημα απέναντι στις εταιρίες.
+    bot.send_message(msg.chat.id, text, reply_markup=main_menu())
 
-📊 Elite Value Detection Engine  
-⚽ Top Leagues Only  
-🎯 Precision Over / Under & Double Chance  
-🧠 Market Inefficiency Analysis  
+# ================= RUN =================
 
-Το σύστημα δεν στέλνει πολλά bets.  
-Στέλνει μόνο αυτά που αξίζουν να παιχτούν.
+def run_web():
+    port = int(os.environ.get("PORT", 8000))
+    app.run(host="0.0.0.0", port=port)
 
-🔥 Οι VIP θέσεις είναι περιορισμένες  
-και όταν καλυφθούν η πρόσβαση κλείνει.
-
-🔒 Πρόσβαση μόνο σε ενεργά μέλη.
-
-Επίλεξε VIP πακέτο για ενεργοποίηση ⬇️."""
-
-    m = InlineKeyboardMarkup(row_width=2)
-    m.add(
-        InlineKeyboardButton("💎 VIP ΠΡΟΣΒΑΣΗ", callback_data="vip"),
-        InlineKeyboardButton("🔥 VIP BETS", callback_data="bets"),
-        InlineKeyboardButton("⭐ FREE PICK", callback_data="free"),
-        InlineKeyboardButton("📊 RESULTS", callback_data="results"),
-        InlineKeyboardButton("🎯 STRATEGY", callback_data="strategy"),
-        InlineKeyboardButton("💬 SUPPORT", callback_data="support")
-    )
-
-    bot.send_message(msg.chat.id, text, reply_markup=m)
-
-# ========= VIP MENU — ΚΑΘΕΤΑ =========
-
-@bot.callback_query_handler(func=lambda c: c.data == "vip")
-def vip(c):
-
-    m = InlineKeyboardMarkup()
-
-    m.add(InlineKeyboardButton("🥉 BASIC — 50€(30 days)", callback_data="buy_basic"))
-    m.add(InlineKeyboardButton("🥇 PRO — 100€(30 days)", callback_data="buy_pro"))
-    m.add(InlineKeyboardButton("⚡ DAY PASS — 15€(1 day pro)", callback_data="buy_day"))
-    m.add(InlineKeyboardButton("🖤 BLACK CARD — Invite Only", callback_data="black"))
-
-    bot.send_message(c.message.chat.id,
-                     "👑 PRIVATE ACCESS TIERS",
-                     reply_markup=m)
-
-# ========= BUY =========
-
-@bot.callback_query_handler(func=lambda c: c.data.startswith("buy_"))
-def buy(c):
-
-    prices = {
-        "buy_basic": 50,
-        "buy_pro": 100,
-        "buy_day": 15
-    }
-
-    link = create_payment(prices[c.data], c.message.chat.id)
-    bot.send_message(c.message.chat.id, f"💳 Πλήρωσε εδώ:\n{link}")
-
-# ========= FREE PICK =========
-
-@bot.callback_query_handler(func=lambda c: c.data == "free")
-def free(c):
-
-    matches = get_matches_24h()
-
-    if matches:
-        analysis = analyze_game(matches[0][0], matches[0][1])
-        if analysis:
-            bot.send_message(c.message.chat.id,
-                             f"⭐ FREE VIP PICK\n{analysis}")
-
-# ========= VIP BETS =========
-
-@bot.callback_query_handler(func=lambda c: c.data == "bets")
-def bets(c):
-
-    plan = get_plan(c.message.chat.id)
-
-    if not plan:
-        bot.send_message(c.message.chat.id, "🔒 VIP ONLY")
-        return
-
-    bot.send_message(c.message.chat.id,
-                     f"🔥 {plan} VIP BETS αποστέλλονται αυτόματα")
-
-# ========= AUTO SYSTEM =========
-
-def auto_bets():
-
-    sent_today = False
-
-    while True:
-
-        if time.strftime("%H") == "12" and not sent_today:
-
-            matches = get_matches_24h()
-
-            # ADMIN gets 8 bets
-            for m in matches[:8]:
-                analysis = analyze_game(m[0], m[1])
-                if analysis:
-                    bot.send_message(ADMIN_ID,
-                                     f"👑 ADMIN ELITE BET\n{analysis}")
-
-            # VIP USERS
-            for row in cursor.execute("SELECT user_id, plan FROM vip_users"):
-                uid, plan = row
-
-                picks = matches[:3] if plan == "BASIC" else matches[:5]
-
-                for m in picks:
-                    analysis = analyze_game(m[0], m[1])
-                    if analysis:
-                        bot.send_message(uid,
-                                         f"🔥 VIP BET\n{analysis}")
-
-            sent_today = True
-
-        if time.strftime("%H") == "00":
-            sent_today = False
-
-        time.sleep(60)
-
-# ========= RUN =========
-
+threading.Thread(target=run_web, daemon=True).start()
 threading.Thread(target=auto_bets, daemon=True).start()
 
-print("VALUEHUNTER EMPEROR RUNNING")
-@bot.callback_query_handler(func=lambda c: c.data == "results")
-def results(c):
-
-    bot.send_message(
-        c.message.chat.id,
-        """🏆 VALUEHUNTER ELITE PERFORMANCE
-
-📊 Last 30 Days:
-
-✔ Win Rate: 74%  
-📈 ROI: +22%  
-🔥 Best Streak: 9 Wins  
-💰 Average Odds: 1.55  
-
-Το σύστημα δεν στοχεύει απλά νίκες.
-Στοχεύει VALUE.
-
-Οι περισσότεροι παίκτες παίζουν χωρίς πλεονέκτημα.
-Τα VIP μέλη παίζουν με δεδομένα.
-
-👑 Τα αποτελέσματα αυτά είναι διαθέσιμα μόνο στα ενεργά μέλη."""
-    )
-@bot.callback_query_handler(func=lambda c: c.data == "strategy")
-def strategy(c):
-
-    bot.send_message(
-        c.message.chat.id,
-        """🎯 VALUEHUNTER INTELLIGENCE SYSTEM
-
-Το σύστημα λειτουργεί διαφορετικά από τα tipster channels.
-
-🧠 Advanced statistical models  
-📊 Market inefficiency detection  
-⚽ Tempo & defensive metrics  
-💰 Real odds value comparison  
-
-Δεν ακολουθεί την αγορά.
-Εντοπίζει πότε η αγορά κάνει λάθος.
-
-Τα περισσότερα bets που κυκλοφορούν δημόσια
-είναι ήδη καμένα.
-
-Τα VIP bets στέλνονται πριν κινηθούν οι αποδόσεις.
-
-👑 Αυτό είναι το πλεονέκτημα των μελών."""
-    )
 bot.infinity_polling()
