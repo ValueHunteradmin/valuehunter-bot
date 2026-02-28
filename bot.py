@@ -266,5 +266,50 @@ def auto_bets():
 threading.Thread(target=auto_bets, daemon=True).start()
 
 print("VALUEHUNTER EMPEROR RUNNING")
+@bot.callback_query_handler(func=lambda c: c.data == "results")
+def results(c):
 
+    bot.send_message(
+        c.message.chat.id,
+        """🏆 VALUEHUNTER ELITE PERFORMANCE
+
+📊 Last 30 Days:
+
+✔ Win Rate: 74%  
+📈 ROI: +22%  
+🔥 Best Streak: 9 Wins  
+💰 Average Odds: 1.55  
+
+Το σύστημα δεν στοχεύει απλά νίκες.
+Στοχεύει VALUE.
+
+Οι περισσότεροι παίκτες παίζουν χωρίς πλεονέκτημα.
+Τα VIP μέλη παίζουν με δεδομένα.
+
+👑 Τα αποτελέσματα αυτά είναι διαθέσιμα μόνο στα ενεργά μέλη."""
+    )
+@bot.callback_query_handler(func=lambda c: c.data == "strategy")
+def strategy(c):
+
+    bot.send_message(
+        c.message.chat.id,
+        """🎯 VALUEHUNTER INTELLIGENCE SYSTEM
+
+Το σύστημα λειτουργεί διαφορετικά από τα tipster channels.
+
+🧠 Advanced statistical models  
+📊 Market inefficiency detection  
+⚽ Tempo & defensive metrics  
+💰 Real odds value comparison  
+
+Δεν ακολουθεί την αγορά.
+Εντοπίζει πότε η αγορά κάνει λάθος.
+
+Τα περισσότερα bets που κυκλοφορούν δημόσια
+είναι ήδη καμένα.
+
+Τα VIP bets στέλνονται πριν κινηθούν οι αποδόσεις.
+
+👑 Αυτό είναι το πλεονέκτημα των μελών."""
+    )
 bot.infinity_polling()
