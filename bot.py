@@ -34,14 +34,12 @@ expire INTEGER
 """)
 db.commit()
 
-# ========= VIP FUNCTIONS =========
+# ========= VIP SYSTEM =========
 
 def add_vip(user_id, plan, days):
     expire = int(time.time()) + days * 86400
-    cursor.execute(
-        "INSERT OR REPLACE INTO vip_users VALUES (?,?,?)",
-        (user_id, plan, expire)
-    )
+    cursor.execute("INSERT OR REPLACE INTO vip_users VALUES (?,?,?)",
+                   (user_id, plan, expire))
     db.commit()
 
 def get_plan(user_id):
@@ -57,12 +55,11 @@ def get_plan(user_id):
 
     return row[0]
 
-# ========= GET MATCHES =========
+# ========= FOOTBALL DATA =========
 
 def get_matches():
     url = "https://v3.football.api-sports.io/fixtures?next=6"
     headers = {"x-apisports-key": FOOTBALL_API_KEY}
-
     r = requests.get(url, headers=headers).json()
 
     matches = []
@@ -71,84 +68,63 @@ def get_matches():
         home = m["teams"]["home"]["name"]
         away = m["teams"]["away"]["name"]
         league = m["league"]["name"]
-
         matches.append((f"{home} vs {away}", league))
 
     return matches
 
-# ========= GET ODDS =========
+# ========= ODDS =========
 
 def get_odds():
-
     url = f"https://api.the-odds-api.com/v4/sports/soccer/odds/?apiKey={ODDS_API_KEY}&regions=eu&markets=h2h,totals"
-
     r = requests.get(url).json()
 
     games = []
 
     for game in r:
-
         home = game["home_team"]
         away = game["away_team"]
 
         for bookmaker in game["bookmakers"]:
+            for market in bookmaker["markets"]:
+                if market["key"] == "totals":
+                    for outcome in market["outcomes"]:
+                        if outcome["name"] == "Over" and outcome["price"] >= 1.55:
 
-            over_odds = None
-
-            for m in bookmaker["markets"]:
-
-                if m["key"] == "totals":
-                    for outcome in m["outcomes"]:
-                        if outcome["name"] == "Over":
-                            over_odds = outcome["price"]
-
-            if over_odds and over_odds >= 1.55:
-
-                games.append(
-                    f"⚽ {home} vs {away}\n"
-                    f"🎯 Over 2.5 Goals @ {over_odds}\n"
-                    f"🛡️ Double Chance: 1X\n"
-                    f"👑 Confidence: ELITE\n"
-                    f"💰 Stake: 3/10"
-                )
-
+                            games.append(
+                                f"⚽ {home} vs {away}\n"
+                                f"🎯 Over 2.5 @ {outcome['price']}\n"
+                                f"🛡️ Double Chance 1X\n"
+                                f"👑 Confidence: ELITE\n"
+                                f"💰 Stake: 3/10"
+                            )
             break
 
     return games
 
-# ========= ELITE PICKS =========
+# ========= ELITE FILTER =========
 
 TOP_LEAGUES = [
-    "Premier League",
-    "La Liga",
-    "Serie A",
-    "Bundesliga",
-    "Ligue 1",
-    "UEFA Champions League"
+    "Premier League","La Liga","Serie A",
+    "Bundesliga","Ligue 1","UEFA Champions League"
 ]
 
-def elite_value_bets():
-
+def elite_bets():
     matches = get_matches()
-    odds_games = get_odds()
+    odds = get_odds()
 
     elite = []
 
     for match, league in matches:
-
         if league in TOP_LEAGUES:
-
-            for odd in odds_games:
-
+            for odd in odds:
                 if match.split(" vs ")[0] in odd:
-
                     elite.append(f"🏆 {league}\n{odd}")
 
     return elite
 
-# ========= AUTO PREMIUM SYSTEM =========
+# ========= AUTO BET SYSTEM =========
 
-def auto_premium():
+def auto_system():
 
     sent = False
 
@@ -158,36 +134,29 @@ def auto_premium():
 
         if hour == "11" and not sent:
 
-            bets = elite_value_bets()
+            bets = elite_bets()
 
             # VIP USERS
             for row in cursor.execute("SELECT user_id, plan FROM vip_users"):
-
                 uid, plan = row
 
-                if plan == "BASIC":
-                    picks = bets[:3]
-                else:
-                    picks = bets[:6]
+                picks = bets[:3] if plan == "BASIC" else bets[:6]
 
-                for pick in picks:
-                    bot.send_message(uid, f"🔥 ELITE VIP BET\n\n{pick}")
+                for p in picks:
+                    bot.send_message(uid, f"🔥 VIP ELITE BET\n\n{p}")
 
-                # 👑 SUPER PICK ONLY FOR PRO
                 if plan == "PRO" and bets:
                     bot.send_message(uid, f"👑 VIP SUPER PICK\n\n{bets[0]}")
 
-            # 📣 CHANNEL POST
+            # CHANNEL
             if bets:
                 bot.send_message(CHANNEL_ID, f"👑 PICK OF THE DAY\n\n{bets[0]}")
 
             sent = True
 
-        # 📊 DAILY REPORT
         if hour == "23":
             bot.send_message(CHANNEL_ID,
-                             "🏆 DAILY REPORT\n"
-                             "Wins: 3\nLosses: 1\nROI: +22%")
+                             "🏆 DAILY REPORT\nWins: 3\nLosses: 1\nROI: +22%")
 
         if hour == "00":
             sent = False
@@ -197,7 +166,6 @@ def auto_premium():
 # ========= PAYMENT =========
 
 def create_payment(amount, user_id):
-
     url = "https://api.nowpayments.io/v1/invoice"
 
     headers = {
@@ -214,10 +182,29 @@ def create_payment(amount, user_id):
     }
 
     r = requests.post(url, json=data, headers=headers)
-
     return r.json().get("invoice_url")
 
-# ========= START MENU =========
+# ========= WEBHOOK =========
+
+@app.route('/payment-webhook', methods=['POST'])
+def webhook():
+
+    data = request.json
+    user_id = int(data.get("order_id"))
+    amount = float(data.get("price_amount", 0))
+
+    if amount == 50:
+        add_vip(user_id, "BASIC", 30)
+    elif amount == 100:
+        add_vip(user_id, "PRO", 30)
+    elif amount == 15:
+        add_vip(user_id, "DAY", 1)
+
+    bot.send_message(user_id, "👑 VIP ACTIVATED — WELCOME TO ELITE")
+
+    return "OK"
+
+# ========= MENU =========
 
 @bot.message_handler(commands=['start'])
 def start(msg):
@@ -236,23 +223,68 @@ def start(msg):
     bot.send_message(
         msg.chat.id,
         "👑 ValueHunter Elite\n"
-        "Premium Football Value Betting Intelligence",
+        "The most exclusive football value betting system.",
         reply_markup=m
     )
+
+# ========= VIP MENU =========
+
+@bot.callback_query_handler(func=lambda c: c.data == "vip")
+def vip(c):
+
+    m = InlineKeyboardMarkup()
+
+    m.add(
+        InlineKeyboardButton("🥉 BASIC VIP — 50€", callback_data="buy_basic"),
+        InlineKeyboardButton("🥇 PRO VIP — 100€", callback_data="buy_pro"),
+        InlineKeyboardButton("⚡ DAY PASS — 15€", callback_data="buy_day")
+    )
+
+    bot.send_message(c.message.chat.id, "💎 Select your VIP plan:", reply_markup=m)
+
+# ========= BUY =========
+
+@bot.callback_query_handler(func=lambda c: c.data.startswith("buy"))
+def buy(c):
+
+    prices = {
+        "buy_basic": 50,
+        "buy_pro": 100,
+        "buy_day": 15
+    }
+
+    link = create_payment(prices[c.data], c.message.chat.id)
+
+    bot.send_message(c.message.chat.id,
+                     f"💳 Complete payment:\n{link}\n\n"
+                     f"Access activates automatically.")
 
 # ========= FREE PICK =========
 
 @bot.callback_query_handler(func=lambda c: c.data == "free")
 def free(c):
 
-    bot.answer_callback_query(c.id)
-
-    picks = elite_value_bets()
+    picks = elite_bets()
 
     if picks:
-        bot.send_message(c.message.chat.id, f"⭐ FREE VIP PICK\n\n{picks[0]}")
+        bot.send_message(c.message.chat.id,
+                         f"⭐ FREE VIP PICK\n\n{picks[0]}")
     else:
         bot.send_message(c.message.chat.id, "No picks available")
+
+# ========= VIP BETS =========
+
+@bot.callback_query_handler(func=lambda c: c.data == "bets")
+def bets(c):
+
+    plan = get_plan(c.message.chat.id)
+
+    if not plan:
+        bot.send_message(c.message.chat.id, "🔒 VIP MEMBERS ONLY")
+        return
+
+    bot.send_message(c.message.chat.id,
+                     f"🔥 {plan} VIP ACTIVE\nDaily bets are delivered automatically.")
 
 # ========= RUN =========
 
@@ -260,9 +292,9 @@ def run_web():
     port = int(os.environ.get("PORT", 8000))
     app.run(host="0.0.0.0", port=port)
 
-threading.Thread(target=auto_premium, daemon=True).start()
+threading.Thread(target=auto_system, daemon=True).start()
 threading.Thread(target=run_web).start()
 
-print("ValueHunter Premium Running...")
+print("ValueHunter ELITE RUNNING")
 
 bot.infinity_polling()
