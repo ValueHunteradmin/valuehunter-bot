@@ -133,14 +133,26 @@ def start(msg):
 
     text = """👑 ValueHunter Elite — Private Members Edition
 
-Δεν είναι δημόσιο tipster bot.
-Είναι κλειστό σύστημα για περιορισμένα μέλη.
+ 👑 Καλώς ήρθες στο ValueHunter Elite — Private Members Edition
 
-⚽ Elite Match Intelligence  
-📊 Real Value Detection  
-🎯 Precision Over/Under & Double Chance  
+Δεν πρόκειται για δημόσιο tipster bot.
 
-🔒 Πρόσβαση μόνο σε ενεργά μέλη."""
+Είναι ένα κλειστό σύστημα για περιορισμένο αριθμό παικτών που θέλουν να παίζουν με πλεονέκτημα απέναντι στις εταιρίες.
+
+📊 Elite Value Detection Engine  
+⚽ Top Leagues Only  
+🎯 Precision Over / Under & Double Chance  
+🧠 Market Inefficiency Analysis  
+
+Το σύστημα δεν στέλνει πολλά bets.  
+Στέλνει μόνο αυτά που αξίζουν να παιχτούν.
+
+🔥 Οι VIP θέσεις είναι περιορισμένες  
+και όταν καλυφθούν η πρόσβαση κλείνει.
+
+🔒 Πρόσβαση μόνο σε ενεργά μέλη.
+
+Επίλεξε VIP πακέτο για ενεργοποίηση ⬇️."""
 
     m = InlineKeyboardMarkup(row_width=2)
     m.add(
@@ -161,9 +173,9 @@ def vip(c):
 
     m = InlineKeyboardMarkup()
 
-    m.add(InlineKeyboardButton("🥉 BASIC — 50€", callback_data="buy_basic"))
-    m.add(InlineKeyboardButton("🥇 PRO — 100€", callback_data="buy_pro"))
-    m.add(InlineKeyboardButton("⚡ DAY PASS — 15€", callback_data="buy_day"))
+    m.add(InlineKeyboardButton("🥉 BASIC — 50€(30 days)", callback_data="buy_basic"))
+    m.add(InlineKeyboardButton("🥇 PRO — 100€(30 days)", callback_data="buy_pro"))
+    m.add(InlineKeyboardButton("⚡ DAY PASS — 15€(1 day pro)", callback_data="buy_day"))
     m.add(InlineKeyboardButton("🖤 BLACK CARD — Invite Only", callback_data="black"))
 
     bot.send_message(c.message.chat.id,
