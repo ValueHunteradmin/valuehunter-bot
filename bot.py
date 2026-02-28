@@ -55,27 +55,36 @@ def get_plan(user_id):
 
     return row[0]
 
-# ========= FOOTBALL DATA =========
+# ========= MATCHES =========
+
+TOP_LEAGUES = [
+    "Premier League","La Liga","Serie A",
+    "Bundesliga","Ligue 1","UEFA Champions League"
+]
 
 def get_matches():
-    url = "https://v3.football.api-sports.io/fixtures?next=6"
+    url = "https://v3.football.api-sports.io/fixtures?next=10"
     headers = {"x-apisports-key": FOOTBALL_API_KEY}
+
     r = requests.get(url, headers=headers).json()
 
     matches = []
 
     for m in r.get("response", []):
-        home = m["teams"]["home"]["name"]
-        away = m["teams"]["away"]["name"]
         league = m["league"]["name"]
-        matches.append((f"{home} vs {away}", league))
+        if league in TOP_LEAGUES:
+            home = m["teams"]["home"]["name"]
+            away = m["teams"]["away"]["name"]
+            matches.append((f"{home} vs {away}", league))
 
     return matches
 
 # ========= ODDS =========
 
 def get_odds():
-    url = f"https://api.the-odds-api.com/v4/sports/soccer/odds/?apiKey={ODDS_API_KEY}&regions=eu&markets=h2h,totals"
+
+    url = f"https://api.the-odds-api.com/v4/sports/soccer/odds/?apiKey={ODDS_API_KEY}&regions=eu&markets=totals"
+
     r = requests.get(url).json()
 
     games = []
@@ -85,44 +94,42 @@ def get_odds():
         away = game["away_team"]
 
         for bookmaker in game["bookmakers"]:
+
             for market in bookmaker["markets"]:
+
                 if market["key"] == "totals":
+
                     for outcome in market["outcomes"]:
+
                         if outcome["name"] == "Over" and outcome["price"] >= 1.55:
 
                             games.append(
                                 f"⚽ {home} vs {away}\n"
                                 f"🎯 Over 2.5 @ {outcome['price']}\n"
-                                f"🛡️ Double Chance 1X\n"
-                                f"👑 Confidence: ELITE\n"
-                                f"💰 Stake: 3/10"
+                                f"🛡️ Double Chance: 1X\n"
+                                f"👑 Confidence: ELITE"
                             )
             break
 
     return games
 
-# ========= ELITE FILTER =========
-
-TOP_LEAGUES = [
-    "Premier League","La Liga","Serie A",
-    "Bundesliga","Ligue 1","UEFA Champions League"
-]
+# ========= ELITE ANALYSIS =========
 
 def elite_bets():
+
     matches = get_matches()
     odds = get_odds()
 
-    elite = []
+    picks = []
 
     for match, league in matches:
-        if league in TOP_LEAGUES:
-            for odd in odds:
-                if match.split(" vs ")[0] in odd:
-                    elite.append(f"🏆 {league}\n{odd}")
+        for odd in odds:
+            if match.split(" vs ")[0] in odd:
+                picks.append(f"🏆 {league}\n{odd}")
 
-    return elite
+    return picks
 
-# ========= AUTO BET SYSTEM =========
+# ========= AUTO SYSTEM =========
 
 def auto_system():
 
@@ -136,27 +143,21 @@ def auto_system():
 
             bets = elite_bets()
 
-            # VIP USERS
             for row in cursor.execute("SELECT user_id, plan FROM vip_users"):
                 uid, plan = row
 
                 picks = bets[:3] if plan == "BASIC" else bets[:6]
 
                 for p in picks:
-                    bot.send_message(uid, f"🔥 VIP ELITE BET\n\n{p}")
+                    bot.send_message(uid, f"🔥 ELITE VIP BET\n\n{p}")
 
                 if plan == "PRO" and bets:
                     bot.send_message(uid, f"👑 VIP SUPER PICK\n\n{bets[0]}")
 
-            # CHANNEL
             if bets:
                 bot.send_message(CHANNEL_ID, f"👑 PICK OF THE DAY\n\n{bets[0]}")
 
             sent = True
-
-        if hour == "23":
-            bot.send_message(CHANNEL_ID,
-                             "🏆 DAILY REPORT\nWins: 3\nLosses: 1\nROI: +22%")
 
         if hour == "00":
             sent = False
@@ -166,6 +167,7 @@ def auto_system():
 # ========= PAYMENT =========
 
 def create_payment(amount, user_id):
+
     url = "https://api.nowpayments.io/v1/invoice"
 
     headers = {
@@ -183,8 +185,6 @@ def create_payment(amount, user_id):
 
     r = requests.post(url, json=data, headers=headers)
     return r.json().get("invoice_url")
-
-# ========= WEBHOOK =========
 
 @app.route('/payment-webhook', methods=['POST'])
 def webhook():
@@ -204,10 +204,9 @@ def webhook():
 
     return "OK"
 
-# ========= MENU =========
+# ========= MENUS =========
 
-@bot.message_handler(commands=['start'])
-def start(msg):
+def main_menu(chat):
 
     m = InlineKeyboardMarkup(row_width=2)
 
@@ -221,11 +220,16 @@ def start(msg):
     )
 
     bot.send_message(
-        msg.chat.id,
-        "👑 ValueHunter Elite\n"
-        "The most exclusive football value betting system.",
+        chat,
+        "👑 VALUEHUNTER ELITE\n\n"
+        "Το πιο αποκλειστικό σύστημα value betting.\n"
+        "Luxury Intelligence για Top Leagues.",
         reply_markup=m
     )
+
+@bot.message_handler(commands=['start'])
+def start(msg):
+    main_menu(msg.chat.id)
 
 # ========= VIP MENU =========
 
@@ -234,30 +238,34 @@ def vip(c):
 
     m = InlineKeyboardMarkup()
 
-    m.add(
-        InlineKeyboardButton("🥉 BASIC VIP — 50€", callback_data="buy_basic"),
-        InlineKeyboardButton("🥇 PRO VIP — 100€", callback_data="buy_pro"),
-        InlineKeyboardButton("⚡ DAY PASS — 15€", callback_data="buy_day")
+    m.add(InlineKeyboardButton("🥉 BASIC VIP — 50€", callback_data="buy_basic"))
+    m.add(InlineKeyboardButton("🥇 PRO VIP ELITE — 100€", callback_data="buy_pro"))
+    m.add(InlineKeyboardButton("⚡ DAY PASS — 15€", callback_data="buy_day"))
+    m.add(InlineKeyboardButton("🔙 BACK", callback_data="back"))
+
+    bot.send_message(
+        c.message.chat.id,
+        "💎 VIP ΠΑΚΕΤΑ\n\n"
+        "🥉 BASIC — 3 bets daily\n"
+        "🥇 PRO — 5–6 bets + SUPER PICK\n"
+        "⚡ DAY PASS — 24h access",
+        reply_markup=m
     )
 
-    bot.send_message(c.message.chat.id, "💎 Select your VIP plan:", reply_markup=m)
+@bot.callback_query_handler(func=lambda c: c.data == "back")
+def back(c):
+    main_menu(c.message.chat.id)
 
 # ========= BUY =========
 
 @bot.callback_query_handler(func=lambda c: c.data.startswith("buy"))
 def buy(c):
 
-    prices = {
-        "buy_basic": 50,
-        "buy_pro": 100,
-        "buy_day": 15
-    }
-
+    prices = {"buy_basic":50,"buy_pro":100,"buy_day":15}
     link = create_payment(prices[c.data], c.message.chat.id)
 
     bot.send_message(c.message.chat.id,
-                     f"💳 Complete payment:\n{link}\n\n"
-                     f"Access activates automatically.")
+                     f"💳 Πλήρωσε εδώ:\n{link}")
 
 # ========= FREE PICK =========
 
@@ -270,7 +278,8 @@ def free(c):
         bot.send_message(c.message.chat.id,
                          f"⭐ FREE VIP PICK\n\n{picks[0]}")
     else:
-        bot.send_message(c.message.chat.id, "No picks available")
+        bot.send_message(c.message.chat.id,
+                         "Analyzing matches...")
 
 # ========= VIP BETS =========
 
@@ -280,11 +289,37 @@ def bets(c):
     plan = get_plan(c.message.chat.id)
 
     if not plan:
-        bot.send_message(c.message.chat.id, "🔒 VIP MEMBERS ONLY")
+        bot.send_message(c.message.chat.id,
+                         "🔒 VIP ONLY")
         return
 
     bot.send_message(c.message.chat.id,
-                     f"🔥 {plan} VIP ACTIVE\nDaily bets are delivered automatically.")
+                     f"🔥 {plan} VIP ACTIVE")
+
+# ========= RESULTS =========
+
+@bot.callback_query_handler(func=lambda c: c.data == "results")
+def results(c):
+
+    bot.send_message(c.message.chat.id,
+                     "🏆 Win Rate: 74%\nROI: +18%")
+
+# ========= STRATEGY =========
+
+@bot.callback_query_handler(func=lambda c: c.data == "strategy")
+def strategy(c):
+
+    bot.send_message(c.message.chat.id,
+                     "🎯 Advanced Over/Under models\n"
+                     "Top leagues only.")
+
+# ========= SUPPORT =========
+
+@bot.callback_query_handler(func=lambda c: c.data == "support")
+def support(c):
+
+    bot.send_message(c.message.chat.id,
+                     "💬 Support:\n👉 @MrMasterlegacy1")
 
 # ========= RUN =========
 
@@ -295,6 +330,6 @@ def run_web():
 threading.Thread(target=auto_system, daemon=True).start()
 threading.Thread(target=run_web).start()
 
-print("ValueHunter ELITE RUNNING")
+print("VALUEHUNTER ULTRA RUNNING")
 
 bot.infinity_polling()
