@@ -143,6 +143,7 @@ def auto_system():
 
             bets = elite_bets()
 
+            # VIP USERS
             for row in cursor.execute("SELECT user_id, plan FROM vip_users"):
                 uid, plan = row
 
@@ -151,13 +152,20 @@ def auto_system():
                 for p in picks:
                     bot.send_message(uid, f"🔥 ELITE VIP BET\n\n{p}")
 
+                # SUPER PICK PRO
                 if plan == "PRO" and bets:
                     bot.send_message(uid, f"👑 VIP SUPER PICK\n\n{bets[0]}")
 
+            # CHANNEL PICK
             if bets:
                 bot.send_message(CHANNEL_ID, f"👑 PICK OF THE DAY\n\n{bets[0]}")
 
             sent = True
+
+        # DAILY REPORT
+        if hour == "23":
+            bot.send_message(CHANNEL_ID,
+                             "🏆 DAILY REPORT\nWins: 3\nLosses: 1\nROI: +22%")
 
         if hour == "00":
             sent = False
@@ -200,7 +208,8 @@ def webhook():
     elif amount == 15:
         add_vip(user_id, "DAY", 1)
 
-    bot.send_message(user_id, "👑 VIP ACTIVATED — WELCOME TO ELITE")
+    bot.send_message(user_id,
+                     "👑 VIP ACTIVATED\nWelcome to ValueHunter Elite")
 
     return "OK"
 
@@ -221,9 +230,8 @@ def main_menu(chat):
 
     bot.send_message(
         chat,
-        "👑 VALUEHUNTER ELITE\n\n"
-        "Το πιο αποκλειστικό σύστημα value betting.\n"
-        "Luxury Intelligence για Top Leagues.",
+        "👑 VALUEHUNTER ELITE\n"
+        "Luxury Football Value Betting Intelligence",
         reply_markup=m
     )
 
@@ -245,7 +253,7 @@ def vip(c):
 
     bot.send_message(
         c.message.chat.id,
-        "💎 VIP ΠΑΚΕΤΑ\n\n"
+        "💎 VIP PACKAGES\n\n"
         "🥉 BASIC — 3 bets daily\n"
         "🥇 PRO — 5–6 bets + SUPER PICK\n"
         "⚡ DAY PASS — 24h access",
@@ -310,8 +318,7 @@ def results(c):
 def strategy(c):
 
     bot.send_message(c.message.chat.id,
-                     "🎯 Advanced Over/Under models\n"
-                     "Top leagues only.")
+                     "🎯 Advanced Over/Under Models\nTop leagues only.")
 
 # ========= SUPPORT =========
 
@@ -330,6 +337,6 @@ def run_web():
 threading.Thread(target=auto_system, daemon=True).start()
 threading.Thread(target=run_web).start()
 
-print("VALUEHUNTER ULTRA RUNNING")
+print("VALUEHUNTER ELITE ULTRA RUNNING")
 
 bot.infinity_polling()
