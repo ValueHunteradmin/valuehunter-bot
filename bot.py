@@ -494,7 +494,7 @@ def free(c):
     # βρίσκει το πρώτο VALID value bet
     for m in matches:
 
-        bet = analyze(m[0], m[1])
+        bet = analyze_match(m[2], m[3], m[0], m[1], m[4])
 
         if bet:
             bot.send_message(
