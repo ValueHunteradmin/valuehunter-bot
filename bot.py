@@ -243,27 +243,279 @@ def buy(c):
 
     bot.send_message(c.message.chat.id,
                      f"💳 Πλήρωσε εδώ:\n{link}")
+# ================= GOD EMPEROR ELITE MENU FULL =================
 
-# ================= MENU =================
+from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
+
+
+# ========= MAIN MENU =========
 
 def main_menu():
+
     m = InlineKeyboardMarkup(row_width=2)
+
     m.add(
-        InlineKeyboardButton("💎 VIP", callback_data="vip"),
+        InlineKeyboardButton("👁 REQUEST ENTRY", callback_data="vip"),
+        InlineKeyboardButton("📡 LIVE SIGNALS", callback_data="bets"),
     )
+
+    m.add(
+        InlineKeyboardButton("🎯 TODAY SAMPLE", callback_data="free"),
+        InlineKeyboardButton("🏆 PERFORMANCE", callback_data="results"),
+    )
+
+    m.add(
+        InlineKeyboardButton("🧠 INTELLIGENCE", callback_data="strategy"),
+        InlineKeyboardButton("🏛 MEMBERS ROOM", callback_data="room"),
+    )
+
+    m.add(
+        InlineKeyboardButton("🚨 MARKET ALERTS", callback_data="alerts"),
+        InlineKeyboardButton("⚙️ HOW IT WORKS", callback_data="how"),
+    )
+
+    m.add(
+        InlineKeyboardButton("🧬 EDGE EXPLANATION", callback_data="edge"),
+        InlineKeyboardButton("👑 INSIDER STATUS", callback_data="status"),
+    )
+
+    m.add(
+        InlineKeyboardButton("💬 CONTACT", callback_data="support"),
+    )
+
     return m
 
-@bot.message_handler(commands=['start'])
-def start(msg):
+
+# ========= BACK + PACKAGES BUTTONS =========
+
+def back_packages():
+
+    m = InlineKeyboardMarkup()
+
+    m.add(
+        InlineKeyboardButton("💎 VIEW PACKAGES", callback_data="vip"),
+        InlineKeyboardButton("🔙 BACK", callback_data="back")
+    )
+
+    return m
+
+
+@bot.callback_query_handler(func=lambda c: c.data == "back")
+def back(c):
+    bot.send_message(c.message.chat.id, "🏛 Main Menu", reply_markup=main_menu())
+
+
+# ================= LIVE SIGNALS =================
+
+@bot.callback_query_handler(func=lambda c: c.data == "bets")
+def bets(c):
+
+    bot.send_message(
+        c.message.chat.id,
+        """📡 LIVE SIGNALS
+
+Τα σημερινά signals έχουν ήδη δοθεί
+στα ενεργά μέλη.
+
+Όταν κινηθούν οι αποδόσεις,
+το edge εξαφανίζεται.
+
+Access requires membership.""",
+        reply_markup=back_packages()
+    )
+
+
+# # ================= EMPEROR SAMPLE ENGINE =================
+
+@bot.callback_query_handler(func=lambda c: c.data == "free")
+def free(c):
+
+    matches = get_matches()
+
+    if not matches:
+        bot.send_message(
+            c.message.chat.id,
+            "⚠️ No matches available right now.",
+            reply_markup=back_packages()
+        )
+        return
+
+    # βρίσκει το πρώτο VALID value bet
+    for m in matches:
+
+        bet = analyze(m[0], m[1])
+
+        if bet:
+            bot.send_message(
+                c.message.chat.id,
+                f"""🎯 TODAY SAMPLE — VALUE DETECTED
+
+{bet}
+
+📡 Αυτό είναι ένα από τα signals
+που λαμβάνουν τα μέλη.
+
+Όταν κινηθεί η αγορά —
+το edge εξαφανίζεται.
+
+👁 Full access μόνο για insiders.""",
+                reply_markup=back_packages()
+            )
+            return
+
+    # αν δεν υπάρχει value
+    bot.send_message(
+        c.message.chat.id,
+        """🎯 TODAY SAMPLE
+
+Σήμερα δεν εντοπίστηκε καθαρό value.
+
+Το σύστημα στέλνει bets μόνο
+όταν υπάρχει πραγματικό πλεονέκτημα.
+
+👑 Αυτό προστατεύει το ROI των μελών.""",
+        reply_markup=back_packages()
+    )
+
+# ================= PERFORMANCE =================
+
+@bot.callback_query_handler(func=lambda c: c.data == "results")
+def results(c):
+
+    bot.send_message(
+        c.message.chat.id,
+        """🏆 NETWORK PERFORMANCE
+
+✔ Win Rate: 78%  
+📈 ROI: +27%  
+🔥 Best run: 13 wins  
+
+Verified results accessible μόνο στα μέλη.""",
+        reply_markup=back_packages()
+    )
+
+
+# ================= INTELLIGENCE =================
+
+@bot.callback_query_handler(func=lambda c: c.data == "strategy")
+def strategy(c):
+
+    bot.send_message(
+        c.message.chat.id,
+        """🧠 INTELLIGENCE ENGINE
+
+• Form & injuries  
+• xG metrics  
+• Odds movement  
+• Market inefficiencies  
+
+👑 Αυτό είναι το πραγματικό edge.""",
+        reply_markup=back_packages()
+    )
+
+
+# ================= MEMBERS ROOM =================
+
+@bot.callback_query_handler(func=lambda c: c.data == "room")
+def room(c):
+
+    bot.send_message(
+        c.message.chat.id,
+        """🏛 MEMBERS ONLY ROOM
+
+• Early signals  
+• Premium matches  
+• Insider notes  
+
+Private access μόνο για ενεργά μέλη.""",
+        reply_markup=back_packages()
+    )
+
+
+# ================= MARKET ALERTS =================
+
+@bot.callback_query_handler(func=lambda c: c.data == "alerts")
+def alerts(c):
+
+    bot.send_message(
+        c.message.chat.id,
+        """🚨 MARKET ALERTS
+
+📉 sudden odds drops  
+📈 sharp money movement  
+
+Τα alerts στέλνονται πριν αντιδράσει η αγορά.""",
+        reply_markup=back_packages()
+    )
+
+
+# ================= HOW IT WORKS =================
+
+@bot.callback_query_handler(func=lambda c: c.data == "how")
+def how(c):
+
+    bot.send_message(
+        c.message.chat.id,
+        """⚙️ HOW IT WORKS
+
+1️⃣ Data συλλογή  
+2️⃣ Model analysis  
+3️⃣ Value detection  
+4️⃣ Selective filtering  
+5️⃣ Delivery πριν κινηθούν οι αποδόσεις""",
+        reply_markup=back_packages()
+    )
+
+
+# ================= EDGE EXPLANATION =================
+
+@bot.callback_query_handler(func=lambda c: c.data == "edge")
+def edge(c):
+
+    bot.send_message(
+        c.message.chat.id,
+        """🧬 EDGE EXPLANATION
+
+Οι περισσότεροι παίζουν αφού κινηθεί η αγορά.
+
+Τα μέλη παίζουν πριν.
+
+👑 Αυτό δημιουργεί το πλεονέκτημα.""",
+        reply_markup=back_packages()
+    )
+
+
+# ================= INSIDER STATUS =================
+
+@bot.callback_query_handler(func=lambda c: c.data == "status")
+def status(c):
 
     seats_left = VIP_LIMIT - vip_count()
 
-    text = f"""🏛️ VALUEHUNTER ELITE
+    bot.send_message(
+        c.message.chat.id,
+        f"""👑 INSIDER STATUS
 
-⚠️ Διαθέσιμες VIP θέσεις: {seats_left}/{VIP_LIMIT}
-🔒 Πρόσβαση μόνο σε ενεργά μέλη."""
+⚠️ Remaining seats: {seats_left}/{VIP_LIMIT}
 
-    bot.send_message(msg.chat.id, text, reply_markup=main_menu())
+Όταν καλυφθούν:
+
+❌ No new entries  
+📅 Waiting list only""",
+        reply_markup=back_packages()
+    )
+
+
+# ================= CONTACT =================
+
+@bot.callback_query_handler(func=lambda c: c.data == "support")
+def support(c):
+
+    bot.send_message(
+        c.message.chat.id,
+        "💬 Private Contact: @MrMasterlegacy1",
+        reply_markup=back_packages()
+    )
 
 # ================= RUN =================
 
