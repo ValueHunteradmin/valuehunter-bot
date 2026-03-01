@@ -180,7 +180,100 @@ def payment_webhook():
 
     return "OK"
 
-# ================= AUTO BETS =================
+# ================= MATCH FETCH =================
+
+def get_matches():
+
+    tomorrow = (datetime.utcnow() + timedelta(days=1)).strftime("%Y-%m-%d")
+
+    url = f"https://v3.football.api-sports.io/fixtures?date={tomorrow}"
+    headers = {"x-apisports-key": FOOTBALL_API_KEY}
+
+    try:
+        r = requests.get(url, headers=headers, timeout=20).json()
+    except:
+        return []
+
+    matches = []
+
+    for m in r.get("response", []):
+
+        # ❌ Skip friendlies & low value matches
+        if "Friendly" in m["league"]["name"]:
+            continue
+
+        matches.append((
+            m["teams"]["home"]["name"],
+            m["teams"]["away"]["name"],
+            m["teams"]["home"]["id"],
+            m["teams"]["away"]["id"],
+            m["league"]["id"]
+        ))
+
+    return matches
+
+
+# ================= ANALYSIS ENGINE =================
+
+def get_team_stats(team_id, league_id):
+
+    url = f"https://v3.football.api-sports.io/teams/statistics?team={team_id}&season=2024&league={league_id}"
+    headers = {"x-apisports-key": FOOTBALL_API_KEY}
+
+    try:
+        r = requests.get(url, headers=headers, timeout=20).json()
+    except:
+        return None
+
+    if not r["response"]:
+        return None
+
+    d = r["response"]
+
+    return {
+        "goals_for": float(d["goals"]["for"]["average"]["total"]),
+        "home_for": float(d["goals"]["for"]["average"]["home"]),
+        "away_for": float(d["goals"]["for"]["average"]["away"]),
+        "goals_against": float(d["goals"]["against"]["average"]["total"])
+    }
+
+
+def analyze_match(home_id, away_id, home, away, league_id):
+
+    stats_home = get_team_stats(home_id, league_id)
+    stats_away = get_team_stats(away_id, league_id)
+
+    if not stats_home or not stats_away:
+        return None
+
+    # ================= VALUE LOGIC =================
+
+    # 👑 ASIAN HANDICAP EDGE
+    if stats_home["goals_for"] > stats_away["goals_for"] + 0.6:
+        return f"⚽ {home} vs {away}\n🎯 Asian Handicap: {home} -0.5"
+
+    if stats_away["goals_for"] > stats_home["goals_for"] + 0.6:
+        return f"⚽ {home} vs {away}\n🎯 Asian Handicap: {away} +0.5"
+
+    # 👑 TEAM GOALS (GOLD MARKET)
+    if stats_home["home_for"] > 1.6:
+        return f"⚽ {home} vs {away}\n🎯 {home} Over 1.5 Goals"
+
+    if stats_away["away_for"] > 1.6:
+        return f"⚽ {home} vs {away}\n🎯 {away} Over 1.5 Goals"
+
+    # 👑 BTTS
+    if stats_home["goals_for"] > 1.3 and stats_away["goals_for"] > 1.3:
+        return f"⚽ {home} vs {away}\n🎯 BTTS — YES"
+
+    # 👑 DRAW NO BET (balanced match)
+    if abs(stats_home["goals_for"] - stats_away["goals_for"]) < 0.3:
+        return f"⚽ {home} vs {away}\n🎯 Draw No Bet: {home}"
+
+    return None
+
+
+# ================= AUTO BETS — VIP PLAN VERSION =================
 
 def auto_bets():
 
@@ -192,23 +285,72 @@ def auto_bets():
 
         if now.hour == 12 and last_day != now.day:
 
+            matches = get_matches()
+
+            if not matches:
+                time.sleep(300)
+                continue
+
             with db_lock:
                 users = cursor.execute(
                     "SELECT user_id, plan FROM vip_users WHERE expire > ?",
                     (int(time.time()),)
                 ).fetchall()
 
-            for uid, plan in users:
+            # 👑 limits per plan
+            plan_limits = {
+                "BASIC": 3,
+                "PRO": 6,
+                "DAY": 1
+            }
 
-                key = f"{uid}-{now.day}"
+            # 👑 track how many sent per user
+            sent_count = {}
 
-                with db_lock:
-                    if cursor.execute("SELECT 1 FROM sent_matches WHERE key=?", (key,)).fetchone():
+            for m in matches:
+
+                home, away, home_id, away_id, league_id = m
+
+                bet = analyze_match(home_id, away_id, home, away, league_id)
+
+                if not bet:
+                    continue
+
+                for uid, plan in users:
+
+                    limit = plan_limits.get(plan, 1)
+
+                    if uid not in sent_count:
+                        sent_count[uid] = 0
+
+                    if sent_count[uid] >= limit:
                         continue
-                    cursor.execute("INSERT INTO sent_matches VALUES (?)", (key,))
-                    db.commit()
 
-                safe_send(uid, "🔥 VIP BET σήμερα διαθέσιμο.")
+                    key = f"{uid}-{home}-{away}-{now.day}"
+
+                    with db_lock:
+                        if cursor.execute(
+                            "SELECT 1 FROM sent_matches WHERE key=?",
+                            (key,)
+                        ).fetchone():
+                            continue
+
+                        cursor.execute(
+                            "INSERT INTO sent_matches VALUES (?)",
+                            (key,)
+                        )
+                        db.commit()
+
+                    safe_send(uid, f"🔥 VIP SIGNAL\n\n{bet}")
+
+                    sent_count[uid] += 1
+
+            # 👑 admin receives ALL bets
+            for m in matches:
+                home, away, home_id, away_id, league_id = m
+                bet = analyze_match(home_id, away_id, home, away, league_id)
+                if bet:
+                    safe_send(ADMIN_ID, f"👑 ADMIN SIGNAL\n\n{bet}")
 
             last_day = now.day
 
