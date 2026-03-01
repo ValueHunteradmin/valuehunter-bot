@@ -195,13 +195,17 @@ def get_matches():
         return []
 
     matches = []
-
+TOP_LEAGUES = [39, 140, 78, 135, 61]
+# Premier League, La Liga, Bundesliga, Serie A, Ligue 1
     for m in r.get("response", []):
-
+# ❌ Skip low quality leagues
+if m["league"]["id"] not in TOP_LEAGUES:
+    continue
         # ❌ Skip friendlies & low value matches
         if "Friendly" in m["league"]["name"]:
             continue
-
+if "Cup" in m["league"]["name"]:
+    continue
         matches.append((
             m["teams"]["home"]["name"],
             m["teams"]["away"]["name"],
@@ -245,7 +249,11 @@ def analyze_match(home_id, away_id, home, away, league_id):
 
     if not stats_home or not stats_away:
         return None
+# 👑 VALUE SCORE FILTER
+value_score = stats_home["goals_for"] - stats_away["goals_against"]
 
+if value_score < 0.4:
+    return None
     # ================= VALUE LOGIC =================
 
     # 👑 ASIAN HANDICAP EDGE
@@ -283,10 +291,11 @@ def auto_bets():
 
         now = datetime.utcnow()
 
-        if now.hour == 12 and last_day != now.day:
+        if 8 <= now.hour <= 12 and last_day != now.day:
 
             matches = get_matches()
-
+import random
+random.shuffle(matches)
             if not matches:
                 time.sleep(300)
                 continue
