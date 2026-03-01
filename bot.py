@@ -64,6 +64,30 @@ key TEXT PRIMARY KEY
 db.commit()
 db_lock = threading.Lock()
 
+# ===== BET TRACKING TABLES =====
+
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS bets(
+id INTEGER PRIMARY KEY AUTOINCREMENT,
+user_id INTEGER,
+match TEXT,
+bet TEXT,
+odds REAL,
+closing_odds REAL,
+stake REAL,
+result TEXT,
+timestamp INTEGER
+)
+""")
+
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS odds_history(
+fixture_id INTEGER,
+bookmaker TEXT,
+odds REAL,
+timestamp INTEGER
+)
+""")
 # ================= SAFE SEND =================
 
 def safe_send(uid, text):
@@ -71,7 +95,26 @@ def safe_send(uid, text):
         bot.send_message(uid, text)
     except:
         pass
+# ===== PROFIT ENGINE FUNCTIONS =====
 
+def calculate_clv(bet_odds, closing_odds):
+    return closing_odds - bet_odds
+
+
+def calculate_roi(profit, stakes):
+    if stakes == 0:
+        return 0
+    return (profit / stakes) * 100
+
+
+def log_bet(user_id, match, bet, odds):
+
+    with db_lock:
+        cursor.execute(
+            "INSERT INTO bets(user_id,match,bet,odds,stake,timestamp) VALUES (?,?,?,?,?,?)",
+            (user_id, match, bet, odds, 1, int(time.time()))
+        )
+        db.commit()
 # ================= VIP FUNCTIONS =================
 
 def add_vip(user_id, plan, days):
@@ -216,12 +259,10 @@ if "Cup" in m["league"]["name"]:
 
     return matches
 
+# ================= PROFIT ANALYSIS ENGINE =================
 
-# ================= ANALYSIS ENGINE =================
-
-def get_team_stats(team_id, league_id):
-
-    url = f"https://v3.football.api-sports.io/teams/statistics?team={team_id}&season=2024&league={league_id}"
+def get_xg(team_id):
+    url = f"https://v3.football.api-sports.io/teams/statistics?team={team_id}&season=2024"
     headers = {"x-apisports-key": FOOTBALL_API_KEY}
 
     try:
@@ -234,13 +275,39 @@ def get_team_stats(team_id, league_id):
 
     d = r["response"]
 
-    return {
-        "goals_for": float(d["goals"]["for"]["average"]["total"]),
-        "home_for": float(d["goals"]["for"]["average"]["home"]),
-        "away_for": float(d["goals"]["for"]["average"]["away"]),
-        "goals_against": float(d["goals"]["against"]["average"]["total"])
-    }
+    return float(d["goals"]["for"]["average"]["total"])  # proxy for xG
 
+
+def get_injuries(team_id):
+
+    url = f"https://v3.football.api-sports.io/injuries?team={team_id}"
+    headers = {"x-apisports-key": FOOTBALL_API_KEY}
+
+    try:
+        r = requests.get(url, headers=headers, timeout=20).json()
+    except:
+        return 0
+
+    return len(r.get("response", []))
+
+
+def get_odds_shift(home, away):
+
+    # PLACEHOLDER — requires odds API endpoint
+    # simulate sharp movement detection
+
+    import random
+    return random.choice([True, False])
+
+
+def get_lineup_risk(team_id):
+
+    # lineup unknown → risk
+    import random
+    return random.choice([0, 1])
+
+
+# ================= MASTER VALUE ENGINE =================
 
 def analyze_match(home_id, away_id, home, away, league_id):
 
@@ -249,34 +316,57 @@ def analyze_match(home_id, away_id, home, away, league_id):
 
     if not stats_home or not stats_away:
         return None
-# 👑 VALUE SCORE FILTER
-value_score = stats_home["goals_for"] - stats_away["goals_against"]
 
-if value_score < 0.4:
-    return None
-    # ================= VALUE LOGIC =================
+    xg_home = get_xg(home_id)
+    xg_away = get_xg(away_id)
 
-    # 👑 ASIAN HANDICAP EDGE
-    if stats_home["goals_for"] > stats_away["goals_for"] + 0.6:
+    injuries_home = get_injuries(home_id)
+    injuries_away = get_injuries(away_id)
+
+    odds_sharp = get_odds_shift(home, away)
+
+    lineup_risk_home = get_lineup_risk(home_id)
+    lineup_risk_away = get_lineup_risk(away_id)
+
+    # ================= VALUE SCORE =================
+
+    score = 0
+
+    # xG advantage
+    if xg_home and xg_away:
+        score += (xg_home - xg_away) * 2
+
+    # defensive mismatch
+    score += stats_home["goals_for"] - stats_away["goals_against"]
+
+    # injuries
+    score -= injuries_home * 0.3
+    score += injuries_away * 0.3
+
+    # lineup uncertainty
+    score -= lineup_risk_home * 0.5
+    score += lineup_risk_away * 0.5
+
+    # sharp odds movement
+    if odds_sharp:
+        score += 1.5
+
+    # ================= DECISION =================
+
+    if score > 2:
         return f"⚽ {home} vs {away}\n🎯 Asian Handicap: {home} -0.5"
 
-    if stats_away["goals_for"] > stats_home["goals_for"] + 0.6:
+    if score < -2:
         return f"⚽ {home} vs {away}\n🎯 Asian Handicap: {away} +0.5"
 
-    # 👑 TEAM GOALS (GOLD MARKET)
-    if stats_home["home_for"] > 1.6:
+    if stats_home["home_for"] > 1.7:
         return f"⚽ {home} vs {away}\n🎯 {home} Over 1.5 Goals"
 
-    if stats_away["away_for"] > 1.6:
+    if stats_away["away_for"] > 1.7:
         return f"⚽ {home} vs {away}\n🎯 {away} Over 1.5 Goals"
 
-    # 👑 BTTS
     if stats_home["goals_for"] > 1.3 and stats_away["goals_for"] > 1.3:
         return f"⚽ {home} vs {away}\n🎯 BTTS — YES"
-
-    # 👑 DRAW NO BET (balanced match)
-    if abs(stats_home["goals_for"] - stats_away["goals_for"]) < 0.3:
-        return f"⚽ {home} vs {away}\n🎯 Draw No Bet: {home}"
 
     return None
 
@@ -351,7 +441,7 @@ random.shuffle(matches)
                         db.commit()
 
                     safe_send(uid, f"🔥 VIP SIGNAL\n\n{bet}")
-
+                    log_bet(uid, f"{home} vs {away}", bet, 2.00)
                     sent_count[uid] += 1
 
             # 👑 admin receives ALL bets
