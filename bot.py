@@ -1417,63 +1417,63 @@ you are currently inside a **temporary entry window**.
         reply_markup=main_menu()
     )
 
-    @bot.callback_query_handler(func=lambda c: True)
-    def callbacks(c):
+@bot.callback_query_handler(func=lambda c: True)
+def callbacks(c):
 
-        if c.data == "elite":
+    if c.data == "elite":
 
-            m = InlineKeyboardMarkup()
+        m = InlineKeyboardMarkup()
 
-            m.add(
-            InlineKeyboardButton("🥉 BASIC 50€", callback_data="buy_basic")
-            )
+        m.add(
+        InlineKeyboardButton("🥉 BASIC 50€", callback_data="buy_basic")
+        )
 
-            m.add(
-            InlineKeyboardButton("🥇 PRO 100€", callback_data="buy_pro")
-            )
+        m.add(
+        InlineKeyboardButton("🥇 PRO 100€", callback_data="buy_pro")
+        )
 
-            m.add(
-            InlineKeyboardButton("⚡ DAY PASS 25€", callback_data="buy_day")
-            )
+        m.add(
+        InlineKeyboardButton("⚡ DAY PASS 25€", callback_data="buy_day")
+        )
 
-            bot.send_message(
-                c.message.chat.id,
-    """
-    👑 VALUEHUNTER ELITE ACCESS
+        bot.send_message(
+            c.message.chat.id,
+"""
+👑 VALUEHUNTER ELITE ACCESS
 
-    Our system scans hundreds of matches daily
-    to detect bookmaker pricing mistakes and
-    high probability value opportunities.
+Our system scans hundreds of matches daily
+to detect bookmaker pricing mistakes and
+high probability value opportunities.
 
-    ━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━
 
-    🥉 BASIC — 50€
+🥉 BASIC — 50€
 
-    • 1 Premium Value Bet per day  
-    • Selected from the highest model edge  
-    • Ideal for consistent long term betting  
+• 1 Premium Value Bet per day  
+• Selected from the highest model edge  
+• Ideal for consistent long term betting  
 
-    ━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━
 
-    🥇 PRO — 100€
+🥇 PRO — 100€
 
-    • 3 Premium Value Bets per day  
-    • Full access to the model's top signals  
-    • Highest expected ROI  
+• 3 Premium Value Bets per day  
+• Full access to the model's top signals  
+• Highest expected ROI  
 
-    ━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━
 
-    ⚡ DAY PASS — 25€
+⚡ DAY PASS — 25€
 
-    • 24 hour PRO access  
-    • Receive today's full signals  
+• 24 hour PRO access  
+• Receive today's full signals  
 
-    ⚠️ Access is limited to members.
-    Signals are released daily at 18:00.
-    🔥 Members are already betting today's signals.
-    """,
-    reply_markup=m
-    )
+⚠️ Access is limited to members.
+Signals are released daily at 18:00.
+🔥 Members are already betting today's signals.
+""",
+            reply_markup=m
+        )
 
     elif c.data == "buy_basic":
 
