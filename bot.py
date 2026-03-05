@@ -771,17 +771,11 @@ def grade_results():
             "UPDATE bets_history SET result=? WHERE id=?",
             (outcome,bet_id)
         )
-        stake = 50
-
-        cursor.execute(
-            "UPDATE bets_history SET result=? WHERE id=?",
-            (outcome,bet_id)
-        )
         db.commit()
         
 # ---------- VALUE ENGINE ----------
 
-def get_value_bets():
+bets = get_value_bets() if minute == 0 else []
 
     fixtures = scan_matches()
 
@@ -1322,6 +1316,7 @@ def send_signals():
             vip_sent_today = False
 
         time.sleep(30)
+        
         # ---------- MONTHLY REPORT ----------
 
          if now.day == 1 and hour == 12 and minute == 0:
