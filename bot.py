@@ -177,7 +177,7 @@ def get_matches():
         matches.append((home,away))
 
     return matches
-(
+
             # ---------- CONFIDENCE SCORE ----------
 
             confidence = (
