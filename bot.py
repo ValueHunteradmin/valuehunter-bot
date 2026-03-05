@@ -1,3 +1,5 @@
+from datetime import datetime, timedelta
+import pytz
 import telebot
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 import requests
@@ -175,396 +177,7 @@ def get_matches():
         matches.append((home,away))
 
     return matches
-# ---------- IMPLIED PROBABILITY ----------
-
-def implied_probability(odds):
-
-    return 1/odds
-# ================= VALUE ENGINE =================
-
-GOOD_LEAGUES = {39,78,140,135,61,94,88,203}
-
-clv_history={}
-odds_history={}
-performance_stats={"wins":0,"losses":0}
-
-league_strength={
-39:1.05,
-78:1.08,
-135:0.95,
-140:1.00,
-61:0.97
-}
-
-def implied_probability(odds):
-    return 1/odds
-
-
-# ---------- MATCH SCANNER ----------
-
-def scan_matches():
-
-    fixtures=[]
-
-    for page in range(1,31):
-
-        url=f"https://v3.football.api-sports.io/fixtures?next=100&page={page}"
-        headers={"x-apisports-key":FOOTBALL_API_KEY}
-
-        try:
-            r=requests.get(url,headers=headers).json()
-            time.sleep(0.1)
-        except:
-            continue
-
-        for m in r["response"]:
-
-            fixtures.append({
-                "fixture_id":m["fixture"]["id"],
-                "home":m["teams"]["home"]["name"],
-                "away":m["teams"]["away"]["name"],
-                "home_id":m["teams"]["home"]["id"],
-                "away_id":m["teams"]["away"]["id"],
-                "league_id":m["league"]["id"]
-            })
-
-    return fixtures
-
-# ---------- TEAM STATS ----------
-team_stats_cache = {}
-def get_team_stats(team_id,league_id):
-
-    if team_id in team_stats_cache:
-        return team_stats_cache[team_id]
-
-    url=f"https://v3.football.api-sports.io/teams/statistics?team={team_id}&league={league_id}&season=2024"
-    headers={"x-apisports-key":FOOTBALL_API_KEY}
-
-    try:
-        r=requests.get(url,headers=headers).json()
-        time.sleep(0.05)
-    except:
-        return None
-
-    if not r["response"]:
-        return None
-
-    d=r["response"]
-
-    attack=float(d["goals"]["for"]["average"]["total"])
-    defense=float(d["goals"]["against"]["average"]["total"])
-
-    team_stats_cache[team_id]=(attack,defense)
-
-    return attack,defense
-    
-# ---------- INJURY MODEL ----------
-injury_cache = {}
-def get_injuries(team_id):
-
-    if team_id in injury_cache:
-        return injury_cache[team_id]
-
-    url=f"https://v3.football.api-sports.io/injuries?team={team_id}"
-    headers={"x-apisports-key":FOOTBALL_API_KEY}
-
-    try:
-        r=requests.get(url,headers=headers).json()
-        time.sleep(0.05)
-    except:
-        return 0
-
-    injuries=len(r["response"])
-
-    injury_cache[team_id]=injuries
-
-    return injuries
-    
-# ---------- TEAM STRENGTH ----------
-
-def team_strength(home_attack,home_defense,away_attack,away_defense):
-
-    home_strength=(home_attack+away_defense)/2
-    away_strength=(away_attack+home_defense)/2
-
-    return home_strength,away_strength
-
-
-# ---------- xG MODEL ----------
-
-def calculate_xg(home_strength,away_strength,league_id):
-
-    modifier=league_strength.get(league_id,1)
-
-    home_xg=home_strength*1.15*modifier
-    away_xg=away_strength*0.95*modifier
-
-    return home_xg,away_xg
-
-
-# ---------- POISSON ----------
-
-def poisson(lmbda,k):
-    return (lmbda**k*math.exp(-lmbda))/math.factorial(k)
-
-
-def poisson_matrix(home_xg,away_xg):
-
-    matrix=[]
-
-    for h in range(6):
-        for a in range(6):
-
-            p=poisson(home_xg,h)*poisson(away_xg,a)
-
-            matrix.append((h,a,p))
-
-    return matrix
-
-# ---------- MONTE CARLO SIMULATION ----------
-
-def monte_carlo_simulation(home_xg,away_xg,simulations=10000):
-
-    home_wins=0
-    draws=0
-    away_wins=0
-
-    for _ in range(simulations):
-
-        home_goals=np.random.poisson(home_xg)
-        away_goals=np.random.poisson(away_xg)
-
-        if home_goals>away_goals:
-            home_wins+=1
-
-        elif home_goals==away_goals:
-            draws+=1
-
-        else:
-            away_wins+=1
-
-    return (
-        home_wins/simulations,
-        draws/simulations,
-        away_wins/simulations
-    )
-# ---------- MARKET PROBABILITIES ----------
-
-def over25_probability(matrix):
-
-    prob=0
-
-    for h,a,p in matrix:
-        if h+a>=3:
-            prob+=p
-
-    return prob
-
-
-def btts_probability(matrix):
-
-    prob=0
-
-    for h,a,p in matrix:
-        if h>0 and a>0:
-            prob+=p
-
-    return prob
-
-
-# ---------- ASIAN HANDICAP ----------
-
-def asian_optimizer(matrix):
-
-    lines=[-1,-0.75,-0.5,-0.25,0,0.25,0.5]
-
-    best_line=None
-    best_prob=0
-
-    for line in lines:
-
-        prob=0
-
-        for h,a,p in matrix:
-
-            if (h-a)>line:
-                prob+=p
-
-        if prob>best_prob:
-            best_prob=prob
-            best_line=line
-
-    return best_line,best_prob
-
-
-# ---------- ODDS SCRAPER ----------
-
-league_odds_cache = {}
-
-def get_league_odds(league_id):
-
-    if league_id in league_odds_cache:
-        return league_odds_cache[league_id]
-
-    url=f"https://v3.football.api-sports.io/odds?league={league_id}&season=2024"
-
-    headers={"x-apisports-key":FOOTBALL_API_KEY}
-
-    try:
-        r=requests.get(url,headers=headers).json()
-        time.sleep(0.05)
-    except:
-        return None
-
-    odds_map={}
-
-    for item in r["response"]:
-
-        fixture=item["fixture"]["id"]
-
-        for book in item["bookmakers"]:
-
-            for bet in book["bets"]:
-
-                for value in bet["values"]:
-
-                    key=f"{bet['name']}_{value['value']}"
-
-                    odds_map.setdefault(fixture,{})[key]=float(value["odd"])
-
-    league_odds_cache[league_id]=odds_map
-
-    return odds_map
-# ---------- ODDS MOVEMENT ----------
-
-def track_odds(fixture_id,odds):
-
-    if fixture_id not in odds_history:
-        odds_history[fixture_id]=odds
-        return 0
-
-    old_odds=odds_history[fixture_id]
-
-    movement=old_odds-odds
-
-    odds_history[fixture_id]=odds
-
-    return movement
-
-# ---------- SHARP DETECTION ----------
-
-def sharp_detection(move):
-
-    if move>0.15:
-        return True
-
-    return False
-
-# ---------- EV ----------
-
-def calculate_ev(prob,odds):
-    return (prob*odds)-1
-
-
-# ---------- BET RANKING ----------
-
-def rank_bets(bets):
-    bets.sort(key=lambda x:x["confidence"],reverse=True)
-    return bets
-
-
-# ---------- VALUE ENGINE ----------
-
-def get_value_bets():
-
-    fixtures=scan_matches()
-
-    candidates=[]
-
-    for f in fixtures:
-
-        if f["league_id"] not in GOOD_LEAGUES:
-            continue
-
-        stats_home=get_team_stats(f["home_id"],f["league_id"])
-        stats_away=get_team_stats(f["away_id"],f["league_id"])
-
-        if not stats_home or not stats_away:
-            continue
-
-        home_attack,home_defense=stats_home
-        away_attack,away_defense=stats_away
-
-        injuries_home=get_injuries(f["home_id"])
-        injuries_away=get_injuries(f["away_id"])
-
-        home_attack-=injuries_home*0.05
-        away_attack-=injuries_away*0.05
-
-        home_strength,away_strength=team_strength(
-            home_attack,home_defense,
-            away_attack,away_defense
-        )
-
-        home_xg,away_xg=calculate_xg(
-            home_strength,away_strength,
-            f["league_id"]
-        )
-        home_prob,draw_prob,away_prob = monte_carlo_simulation(home_xg,away_xg)
-        matrix=poisson_matrix(home_xg,away_xg)
-
-        total=sum(p for _,_,p in matrix)
-        matrix=[(h,a,p/total) for h,a,p in matrix]
-
-        asian_line,asian_prob=asian_optimizer(matrix)
-
-        asian_prob = (asian_prob + home_prob) / 2
-        over_prob=over25_probability(matrix)
-        btts_prob=btts_probability(matrix)
-
-        league_odds = get_league_odds(f["league_id"])
-
-        if not league_odds:
-            continue
-
-        odds = league_odds.get(f["fixture_id"])
-
-        if not odds:
-            continue
-        markets=[]
-
-        asian_odds=odds.get("Match Winner_Home")
-        over_odds=odds.get("Goals Over/Under_Over 2.5")
-        btts_odds=odds.get("Both Teams Score_Yes")
-
-        if asian_odds:
-            markets.append(("Asian Handicap",asian_prob,asian_odds,asian_line))
-
-        if over_odds:
-            markets.append(("Over 2.5",over_prob,over_odds,None))
-
-        if btts_odds:
-            markets.append(("BTTS",btts_prob,btts_odds,None))
-
-        for market,prob,odds_value,line in markets:
-
-            implied=implied_probability(odds_value)
-            edge=prob-implied
-            # ---------- MARKET EFFICIENCY FILTER ----------
-
-            if odds_value < 1.60 or odds_value > 3.20:
-                continue
-            if edge<0.04:
-                continue
-            # minimum model confidence
-
-            if prob < 0.56:
-                continue
-            ev=calculate_ev(prob,odds_value)
-
-            move=track_odds(f["fixture_id"],odds_value)
-            sharp=sharp_detection(move)
-
+(
             # ---------- CONFIDENCE SCORE ----------
 
             confidence = (
@@ -575,14 +188,30 @@ def get_value_bets():
 
             if sharp:
                 confidence += 5
-
+            if steam:
+                confidence += 10
             if ev > 0.05:
 
                 pick = market
 
                 if market == "Asian Handicap":
                     pick = f"Asian Handicap {f['home']} {line}"
+                bet_key = f"{f['fixture_id']}_{pick}"
 
+                # αν το bet έχει ήδη σταλεί → skip
+                if cursor.execute(
+                    "SELECT key FROM sent_bets WHERE key=?",
+                    (bet_key,)
+                ).fetchone():
+                    continue
+
+                # αποθήκευση bet
+                cursor.execute(
+                    "INSERT INTO sent_bets VALUES (?)",
+                    (bet_key,)
+                )
+
+                db.commit()
                 candidates.append({
                     "match": f"{f['home']} vs {f['away']}",
                     "pick": pick,
@@ -590,6 +219,7 @@ def get_value_bets():
                     "odds": odds_value,
                     "ev": ev,
                     "confidence": confidence
+                    "stake":stake,
                 })
 
     ranked = rank_bets(candidates)
@@ -616,6 +246,7 @@ f"""⭐ SUPER SAFE BET
 📊 Odds {round(super_safe['odds'],2)}
 📈 Probability {round(super_safe['prob']*100)}%
 💰 Value {round(super_safe['ev'],2)}"""
+💵 Stake {round(b['stake']*100,1)}% bankroll"""
         )
 
     for bet in high_value[:2]:
@@ -627,6 +258,7 @@ f"""🔥 HIGH VALUE
 📊 Odds {round(bet['odds'],2)}
 📈 Probability {round(bet['prob']*100)}%
 💰 Value {round(bet['ev'],2)}"""
+💵 Stake {round(b['stake']*100,1)}% bankroll"""
         )
 
     league_odds_cache.clear()
@@ -699,37 +331,62 @@ Win Rate: {winrate}%
 
 def send_signals():
 
+    tz = pytz.timezone("Europe/Athens")
+
+    admin_sent_today = False
+    vip_sent_today = False
+
     while True:
+
+        now = datetime.now(tz)
+
+        hour = now.hour
+        minute = now.minute
 
         bets = get_value_bets()
 
-        users = get_vip_users()
+        # ---------- ADMIN 17:00 ----------
 
-        for uid,plan in users:
+        if hour == 17 and minute == 0 and not admin_sent_today:
 
-            if plan == "BASIC":
+            if bets:
+                bot.send_message(
+                    ADMIN_ID,
+                    "ADMIN SIGNALS\n\n" + "\n\n".join(bets[:3])
+                )
 
-                picks = bets[:1]
+            admin_sent_today = True
 
-            elif plan == "PRO":
+        # ---------- VIP 18:00 ----------
 
-                picks = bets[:3]
+        if hour == 18 and minute == 0 and not vip_sent_today:
 
-            else:
-                continue
+            users = get_vip_users()
 
-            text = "🔥 VIP SIGNALS\n\n" + "\n\n".join(picks)
+            for uid, plan in users:
 
-            bot.send_message(uid,text)
+                if plan == "BASIC":
+                    picks = bets[:1]
 
-        # admin gets PRO always
-        if bets:
-            bot.send_message(
-                ADMIN_ID,
-                "ADMIN SIGNALS\n\n"+"\n\n".join(bets[:3])
-            )
+                elif plan == "PRO":
+                    picks = bets[:3]
 
-        time.sleep(86400)
+                else:
+                    continue
+
+                text = "🔥 VIP SIGNALS\n\n" + "\n\n".join(picks)
+
+                bot.send_message(uid, text)
+
+            vip_sent_today = True
+
+        # reset κάθε μέρα
+
+        if hour == 0 and minute == 5:
+            admin_sent_today = False
+            vip_sent_today = False
+
+        time.sleep(30)
 
 # ================= TELEGRAM =================
 
