@@ -602,10 +602,10 @@ def get_value_bets():
     
     for bet in ranked:
 
-    if bet["prob"]>=0.65 and not super_safe:
-        super_safe=bet
+        if bet["prob"] >= 0.65 and not super_safe:
+        super_safe = bet
 
-    elif bet["prob"]>=0.57:
+    elif bet["prob"] >= 0.57:
         high_value.append(bet)
 
 # ---------- FINAL PICKS ----------
