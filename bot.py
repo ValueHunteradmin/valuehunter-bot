@@ -192,6 +192,7 @@ league_strength={
 
 odds_history={}
 steam_history={}
+clv_history={}
 
 team_stats_cache={}
 injury_cache={}
@@ -407,7 +408,7 @@ def asian_optimizer(matrix):
     return best_line,best_prob
 
 
-# ---------- ODDS ----------
+# ---------- ODDS PARSER ----------
 
 def get_league_odds(league_id):
 
@@ -422,9 +423,37 @@ def get_league_odds(league_id):
     except:
         return None
 
-    league_odds_cache[league_id]=r
+    odds_data={}
 
-    return r
+    for game in r["response"]:
+
+        fixture_id=game["fixture"]["id"]
+
+        bookmakers=game["bookmakers"]
+
+        best_odds={}
+
+        for book in bookmakers:
+
+            for bet in book["bets"]:
+
+                market=bet["name"]
+
+                for v in bet["values"]:
+
+                    key=f"{market}_{v['value']}"
+                    odd=float(v["odd"])
+
+                    if key not in best_odds:
+                        best_odds[key]=odd
+                    else:
+                        best_odds[key]=max(best_odds[key],odd)
+
+        odds_data[fixture_id]=best_odds
+
+    league_odds_cache[league_id]=odds_data
+
+    return odds_data
 
 
 # ---------- ODDS MOVEMENT ----------
@@ -454,13 +483,38 @@ def detect_steam_move(fixture_id,odds):
 
     return drop>=0.20
 
+# ---------- CLV TRACKER ----------
 
+def track_clv(fixture_id,odds):
+
+    if fixture_id not in clv_history:
+        clv_history[fixture_id]=odds
+        return 0
+
+    open_odds=clv_history[fixture_id]
+
+    clv=open_odds-odds
+
+    return clv
+    
 # ---------- EV ----------
 
 def calculate_ev(prob,odds):
     return (prob*odds)-1
 
+# ---------- MARKET CONSENSUS FILTER ----------
 
+def market_consensus_filter(prob,odds):
+
+    market_prob = 1/odds
+
+    difference = abs(prob - market_prob)
+
+    if difference > 0.20:
+        return False
+
+    return True
+    
 # ---------- KELLY ----------
 
 def kelly_stake(prob,odds):
@@ -552,7 +606,8 @@ def get_value_bets():
 
             implied=implied_probability(odds_value)
             edge=prob-implied
-
+            if not market_consensus_filter(prob,odds_value):
+                continue
             if edge<0.04 or prob<0.56:
                 continue
 
@@ -560,13 +615,15 @@ def get_value_bets():
 
             move=track_odds(f["fixture_id"],odds_value)
             steam=detect_steam_move(f["fixture_id"],odds_value)
-
+            clv = track_clv(f["fixture_id"], odds_value)
+            
             stake=kelly_stake(prob,odds_value)
 
             confidence=(prob*50)+(edge*200)+(ev*100)
 
             if steam:
                 confidence+=10
+                
 
             if ev>0.05:
 
