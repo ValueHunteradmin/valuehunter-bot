@@ -152,19 +152,47 @@ def webhook():
     if status != "finished":
         return "ignored"
 
-    if amount == 50:
-        add_vip(user_id,"BASIC",30)
+    import time
+    now = int(time.time())
+
+    # επιλογή plan + διάρκεια
+    if amount == 25:
+        plan = "DAY"
+        expiry = now + 86400          # 1 μέρα
+
+    elif amount == 50:
+        plan = "BASIC"
+        expiry = now + 2592000       # 30 μέρες
 
     elif amount == 100:
-        add_vip(user_id,"PRO",30)
+        plan = "PRO"
+        expiry = now + 2592000       # 30 μέρες
+
+    else:
+        return "invalid amount"
+
+    cursor.execute(
+    "INSERT OR REPLACE INTO vip_users VALUES (?,?,?)",
+    (user_id,plan,expiry)
+    )
+
+    db.commit()
 
     bot.send_message(
         user_id,
-        "👑 VIP Activated\nYou will start receiving signals."
-    )
+    """
+    🔥 PAYMENT CONFIRMED
 
-    return "ok"
+     Welcome to VALUEHUNTER ELITE.
 
+     🔑Your access is now active
+
+     🕔 17:00 Model release
+     🕕 18:00 VIP signals
+     """
+     )
+     
+     return "ok"
 # ================= FOOTBALL DATA =================
 
 def get_matches():
@@ -1297,9 +1325,8 @@ def send_signals():
                 if plan == "BASIC":
                     picks = bets[:1]
 
-                elif plan == "PRO":
+                elif plan in ["PRO","DAY"]:
                     picks = bets[:3]
-
                 else:
                     continue
 
@@ -1347,12 +1374,39 @@ def start(m):
     bot.send_message(
         m.chat.id,
         """
-👁 PRIVATE BETTING NETWORK
+👁‍🗨 WELCOME TO VALUEHUNTER
 
-Signals are generated using
-data analysis and odds movement.
+You have just entered a **private betting intelligence network**.
 
-Access is limited to members.
+This platform is operated by a professional analytics team focused on detecting **bookmaker pricing errors and high-value opportunities** across global football markets.
+
+━━━━━━━━━━━━━━
+
+📊 Our models analyze:
+
+⚙️ Advanced Expected Goals data  
+📉 Market inefficiencies  
+📡 Sharp odds movement  
+💰 Liquidity signals  
+
+Hundreds of matches are scanned daily to identify **the strongest value opportunities**.
+
+━━━━━━━━━━━━━━
+
+⚠️ IMPORTANT NOTICE
+
+Access to this network is **restricted**.
+
+Membership capacity is limited and entry is **periodically closed** in order to maintain signal quality and protect the betting edge.
+
+━━━━━━━━━━━━━━
+
+🔓 If you received access today,  
+you are currently inside a **temporary entry window**.
+
+🔥 Today's signals will be released at 18:00.
+⬇️ Use the menu below to explore the platform.
+
 """,
         reply_markup=main_menu()
     )
@@ -1362,24 +1416,44 @@ def callbacks(c):
 
     if c.data == "elite":
 
-        m = InlineKeyboardMarkup()
-
-        m.add(InlineKeyboardButton("🥉 BASIC 50€",callback_data="buy_basic"))
-        m.add(InlineKeyboardButton("🥇 PRO 100€",callback_data="buy_pro"))
-
         bot.send_message(
             c.message.chat.id,
-            """
-👑 ELITE MEMBERSHIP
+    """
+    👑 VALUEHUNTER ELITE ACCESS
 
-🥉 BASIC
-1 value bet per day
+    Our system scans hundreds of matches daily
+    to detect bookmaker pricing mistakes and
+    high probability value opportunities.
 
-🥇 PRO
-3 value bets per day
-""",
-            reply_markup=m
-        )
+    ━━━━━━━━━━━━━━
+
+    🥉 BASIC — 50€
+
+    • 1 Premium Value Bet per day  
+    • Selected from the highest model edge  
+    • Ideal for consistent long term betting  
+
+    ━━━━━━━━━━━━━━
+
+    🥇 PRO — 100€
+
+    • 3 Premium Value Bets per day  
+    • Full access to the model's top signals  
+    • Highest expected ROI  
+
+    ━━━━━━━━━━━━━━
+
+    ⚡ DAY PASS — 25€
+
+    • 24 hour PRO access  
+    • Receive today's full signals  
+
+    ⚠️ Access is limited to members.
+    Signals are released daily at 18:00.
+    🔥 Members are already betting today's signals.
+    """,
+    reply_markup=m
+    )
 
     elif c.data == "buy_basic":
 
@@ -1387,8 +1461,41 @@ def callbacks(c):
 
         bot.send_message(
             c.message.chat.id,
-            f"Pay here:\n{link}"
-        )
+    f"""
+    🥉 BASIC ACCESS
+
+    You are about to unlock **VALUEHUNTER BASIC membership**.
+
+    This plan gives you access to:
+
+    📊 1 Premium Value Bet per day  
+    📈 Selected from the highest model edge  
+    ⚙️ Generated using advanced football analytics  
+    🎯 Focused on long-term profitable betting  
+
+    ━━━━━━━━━━━━━━
+
+    Signals are released daily at:
+
+    🕔 17:00 — Model analysis  
+    🕕 18:00 — Official signal release
+
+    ━━━━━━━━━━━━━━
+
+    ⚠️ IMPORTANT
+
+    Membership slots are **limited** to maintain
+    signal efficiency and market advantage.
+
+    Members are already preparing today's bets.
+    
+    Secure your access below:
+
+    💳 Activate BASIC membership:
+
+    {link}
+    """
+    )
 
     elif c.data == "buy_pro":
 
@@ -1396,16 +1503,131 @@ def callbacks(c):
 
         bot.send_message(
             c.message.chat.id,
-            f"Pay here:\n{link}"
-        )
+    f"""
+    🥇 VALUEHUNTER PRO ACCESS
 
-    elif c.data == "sample":
+    You are about to activate **PRO membership**.
+
+    This is the **full access tier** of the ValueHunter network.
+
+    ━━━━━━━━━━━━━━
+
+    With PRO you receive:
+
+    📊 3 Premium Value Bets every day  
+    📈 Highest model edge opportunities  
+    📡 Sharp odds movement detection  
+    ⚙️ Advanced football analytics  
+
+    Signals are selected from **hundreds of matches analyzed daily**.
+
+    ━━━━━━━━━━━━━━
+
+    📅 SIGNAL SCHEDULE
+
+    🕔 17:00 — Model analysis  
+    🕕 18:00 — VIP signals released  
+
+    ━━━━━━━━━━━━━━
+
+    ⚠️ PRO membership capacity is limited
+    to maintain signal efficiency.
+    
+    Most members choose PRO for full access.
+    
+    Activate your access below:
+
+    💳 Secure your PRO access:
+
+    {link}
+    """
+    )
+    
+    elif c.data == "buy_day":
+
+        link = create_payment(25,c.message.chat.id)
 
         bot.send_message(
             c.message.chat.id,
-            f"🎁 FREE SAMPLE\n\n{daily_sample(c.message.chat.id)}"
+    f"""
+    ⚡ VALUEHUNTER DAY PASS
+
+    You are about to activate **24 hour PRO access**.
+
+    This pass allows you to experience the **full ValueHunter system** for one day.
+
+    ━━━━━━━━━━━━━━
+
+    With the DAY PASS you receive:
+
+    📊 Up to 3 Premium Value Bets today  
+    📈 Highest model edge opportunities  
+    📡 Sharp odds movement detection  
+    ⚙️ Advanced football analytics  
+
+    ━━━━━━━━━━━━━━
+
+    📅 SIGNAL SCHEDULE
+
+    🕔 17:00 — Model analysis  
+    🕕 18:00 — VIP signals released  
+
+    ━━━━━━━━━━━━━━
+
+    ⚠️ DAY PASS availability is limited
+    during active signal days.
+
+    Activate your 24h access below:
+
+    💳 Get DAY PASS access:
+
+    {link}
+    """
+    )
+    
+    elif c.data == "sample":
+
+        bet = daily_sample(c.message.chat.id)
+
+        bot.send_message(
+            c.message.chat.id,
+            f"🎁 FREE SAMPLE\n\n{bet}"
         )
 
+        bot.send_message(
+        c.message.chat.id,
+    """
+    🎁 FREE SAMPLE DELIVERED
+
+    This was today's free value opportunity from the ValueHunter model.
+
+    ━━━━━━━━━━━━━━
+
+    👑 ELITE members already received
+    the full signal card for today.
+
+    🥉 BASIC
+    • 1 Premium Value Bet daily
+
+    🥇 PRO
+    • 3 Premium Value Bets daily
+    • Full access to the strongest model signals
+
+    ⚡ DAY PASS
+    • 24 hour PRO access
+    • Receive today's full signals
+
+    ━━━━━━━━━━━━━━
+
+    ⚠️ Today's signals are released at **18:00**
+
+    Access to the network may close
+    once today's signals begin.
+
+    Use the menu below to unlock access.
+    """
+        )
+        
     elif c.data == "alert":
 
         bot.send_message(
@@ -1417,14 +1639,55 @@ def callbacks(c):
 
         bot.send_message(
             c.message.chat.id,
-            performance()
+    f"""
+    📊 VALUEHUNTER PERFORMANCE
+
+    All results are tracked automatically
+    based on official match results.
+
+    ━━━━━━━━━━━━━━
+
+    📅 TODAY
+
+    {performance()}
+
+    ━━━━━━━━━━━━━━
+
+    📈 MONTHLY RESULTS
+
+    {monthly_report()}
+
+    ━━━━━━━━━━━━━━
+
+    Our signals are generated using:
+
+    • Expected Goals models  
+    • Market inefficiency detection  
+    • Sharp odds movement  
+
+    ⚠️ Full signals are available only
+    to ELITE members.
+    """
         )
-
+        
     elif c.data == "support":
-
+    
         bot.send_message(
             c.message.chat.id,
-            "Contact: @MrMasterlegacy1"
+    """
+    💬 VALUEHUNTER SUPPORT
+
+    Need help with access or payments?
+
+    Contact our support team:
+
+    @MrMasterlegacy1
+
+    We will assist you quickly.
+
+    ⚠️ VIP signals are released daily
+    at 18:00.
+    """
         )
 
 # ================= THREADS =================
