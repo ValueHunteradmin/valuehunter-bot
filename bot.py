@@ -775,7 +775,7 @@ def grade_results():
         
 # ---------- VALUE ENGINE ----------
 
-bets = get_value_bets() if minute == 0 else []
+def get_value_bets():
 
     fixtures = scan_matches()
 
