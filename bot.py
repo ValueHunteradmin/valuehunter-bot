@@ -772,11 +772,13 @@ def callbacks(c):
 
 # ================= THREADS =================
 
-threading.Thread(target=send_signals).start()
+threading.Thread(target=send_signals, daemon=True).start()
 
-# ================= RUN =================
 threading.Thread(
     target=lambda: app.run(host="0.0.0.0", port=8080),
     daemon=True
 ).start()
+
+# ================= RUN =================
+
 bot.infinity_polling()
