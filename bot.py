@@ -301,7 +301,7 @@ def get_team_stats(team_id,league_id):
         return None
 
     if not r.get("response"):
-    return None
+        return None
 
     d=r["response"]
 
