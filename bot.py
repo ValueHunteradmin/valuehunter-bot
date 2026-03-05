@@ -178,64 +178,442 @@ def get_matches():
 
     return matches
 
-            # ---------- CONFIDENCE SCORE ----------
+# ================= VALUE ENGINE =================
 
-            confidence = (
-                (prob * 50) +
-                (edge * 200) +
-                (ev * 100)
-            )
+GOOD_LEAGUES = {39,78,140,135,61,94,88,203}
 
-            if sharp:
-                confidence += 5
+league_strength={
+39:1.05,
+78:1.08,
+135:0.95,
+140:1.00,
+61:0.97
+}
+
+odds_history={}
+steam_history={}
+
+team_stats_cache={}
+injury_cache={}
+league_odds_cache={}
+
+# ---------- IMPLIED PROBABILITY ----------
+
+def implied_probability(odds):
+    return 1/odds
+
+
+# ---------- MATCH SCANNER ----------
+
+def scan_matches():
+
+    fixtures=[]
+
+    for page in range(1,31):
+
+        url=f"https://v3.football.api-sports.io/fixtures?next=100&page={page}"
+        headers={"x-apisports-key":FOOTBALL_API_KEY}
+
+        try:
+            r=requests.get(url,headers=headers).json()
+            time.sleep(0.1)
+        except:
+            continue
+
+        for m in r["response"]:
+
+            match_time=m["fixture"]["timestamp"]
+            now=int(time.time())
+
+            if not (86400 <= match_time-now <=129600):
+                continue
+
+            fixtures.append({
+                "fixture_id":m["fixture"]["id"],
+                "home":m["teams"]["home"]["name"],
+                "away":m["teams"]["away"]["name"],
+                "home_id":m["teams"]["home"]["id"],
+                "away_id":m["teams"]["away"]["id"],
+                "league_id":m["league"]["id"]
+            })
+
+    return fixtures
+
+
+# ---------- TEAM STATS ----------
+
+def get_team_stats(team_id,league_id):
+
+    if team_id in team_stats_cache:
+        return team_stats_cache[team_id]
+
+    url=f"https://v3.football.api-sports.io/teams/statistics?team={team_id}&league={league_id}&season=2024"
+    headers={"x-apisports-key":FOOTBALL_API_KEY}
+
+    try:
+        r=requests.get(url,headers=headers).json()
+    except:
+        return None
+
+    if not r["response"]:
+        return None
+
+    d=r["response"]
+
+    attack=float(d["goals"]["for"]["average"]["total"])
+    defense=float(d["goals"]["against"]["average"]["total"])
+
+    team_stats_cache[team_id]=(attack,defense)
+
+    return attack,defense
+
+
+# ---------- INJURIES ----------
+
+def get_injuries(team_id):
+
+    if team_id in injury_cache:
+        return injury_cache[team_id]
+
+    url=f"https://v3.football.api-sports.io/injuries?team={team_id}"
+    headers={"x-apisports-key":FOOTBALL_API_KEY}
+
+    try:
+        r=requests.get(url,headers=headers).json()
+    except:
+        return 0
+
+    injuries=len(r["response"])
+
+    injury_cache[team_id]=injuries
+
+    return injuries
+
+
+# ---------- TEAM STRENGTH ----------
+
+def team_strength(home_attack,home_defense,away_attack,away_defense):
+
+    home_strength=(home_attack+away_defense)/2
+    away_strength=(away_attack+home_defense)/2
+
+    return home_strength,away_strength
+
+
+# ---------- xG MODEL ----------
+
+def calculate_xg(home_strength,away_strength,league_id):
+
+    modifier=league_strength.get(league_id,1)
+
+    home_xg=home_strength*1.15*modifier
+    away_xg=away_strength*0.95*modifier
+
+    return home_xg,away_xg
+
+
+# ---------- POISSON ----------
+
+def poisson(lmbda,k):
+    return (lmbda**k*math.exp(-lmbda))/math.factorial(k)
+
+
+def poisson_matrix(home_xg,away_xg):
+
+    matrix=[]
+
+    for h in range(6):
+        for a in range(6):
+
+            p=poisson(home_xg,h)*poisson(away_xg,a)
+
+            matrix.append((h,a,p))
+
+    return matrix
+
+
+# ---------- MONTE CARLO ----------
+
+def monte_carlo_simulation(home_xg,away_xg,simulations=10000):
+
+    home_wins=0
+
+    for _ in range(simulations):
+
+        hg=np.random.poisson(home_xg)
+        ag=np.random.poisson(away_xg)
+
+        if hg>ag:
+            home_wins+=1
+
+    return home_wins/simulations
+
+
+# ---------- PROBABILITY CALIBRATION ----------
+
+def calibrate_probability(prob):
+
+    calibrated=1/(1+math.exp(-4*(prob-0.5)))
+
+    return calibrated
+
+
+# ---------- MARKET PROBABILITIES ----------
+
+def over25_probability(matrix):
+
+    prob=0
+
+    for h,a,p in matrix:
+        if h+a>=3:
+            prob+=p
+
+    return prob
+
+
+def btts_probability(matrix):
+
+    prob=0
+
+    for h,a,p in matrix:
+        if h>0 and a>0:
+            prob+=p
+
+    return prob
+
+
+# ---------- ASIAN HANDICAP ----------
+
+def asian_optimizer(matrix):
+
+    lines=[-1,-0.75,-0.5,-0.25,0,0.25,0.5]
+
+    best_line=None
+    best_prob=0
+
+    for line in lines:
+
+        prob=0
+
+        for h,a,p in matrix:
+
+            if (h-a)>line:
+                prob+=p
+
+        if prob>best_prob:
+            best_prob=prob
+            best_line=line
+
+    return best_line,best_prob
+
+
+# ---------- ODDS ----------
+
+def get_league_odds(league_id):
+
+    if league_id in league_odds_cache:
+        return league_odds_cache[league_id]
+
+    url=f"https://v3.football.api-sports.io/odds?league={league_id}&season=2024"
+    headers={"x-apisports-key":FOOTBALL_API_KEY}
+
+    try:
+        r=requests.get(url,headers=headers).json()
+    except:
+        return None
+
+    league_odds_cache[league_id]=r
+
+    return r
+
+
+# ---------- ODDS MOVEMENT ----------
+
+def track_odds(fixture_id,odds):
+
+    if fixture_id not in odds_history:
+        odds_history[fixture_id]=odds
+        return 0
+
+    move=odds_history[fixture_id]-odds
+    odds_history[fixture_id]=odds
+
+    return move
+
+
+# ---------- STEAM DETECTOR ----------
+
+def detect_steam_move(fixture_id,odds):
+
+    if fixture_id not in steam_history:
+        steam_history[fixture_id]=odds
+        return False
+
+    drop=steam_history[fixture_id]-odds
+    steam_history[fixture_id]=odds
+
+    return drop>=0.20
+
+
+# ---------- EV ----------
+
+def calculate_ev(prob,odds):
+    return (prob*odds)-1
+
+
+# ---------- KELLY ----------
+
+def kelly_stake(prob,odds):
+
+    b=odds-1
+    q=1-prob
+
+    k=(b*prob-q)/b
+
+    if k<0:
+        return 0
+
+    return k
+
+
+# ---------- RANK ----------
+
+def rank_bets(bets):
+    bets.sort(key=lambda x:x["confidence"],reverse=True)
+    return bets
+
+
+# ---------- VALUE ENGINE ----------
+
+def get_value_bets():
+
+    fixtures=scan_matches()
+
+    candidates=[]
+
+    for f in fixtures:
+
+        if f["league_id"] not in GOOD_LEAGUES:
+            continue
+
+        stats_home=get_team_stats(f["home_id"],f["league_id"])
+        stats_away=get_team_stats(f["away_id"],f["league_id"])
+
+        if not stats_home or not stats_away:
+            continue
+
+        home_attack,home_defense=stats_home
+        away_attack,away_defense=stats_away
+
+        home_attack-=get_injuries(f["home_id"])*0.05
+        away_attack-=get_injuries(f["away_id"])*0.05
+
+        hs,as_=team_strength(home_attack,home_defense,away_attack,away_defense)
+
+        home_xg,away_xg=calculate_xg(hs,as_,f["league_id"])
+
+        matrix=poisson_matrix(home_xg,away_xg)
+
+        total=sum(p for _,_,p in matrix)
+        matrix=[(h,a,p/total) for h,a,p in matrix]
+
+        home_prob=monte_carlo_simulation(home_xg,away_xg)
+
+        line,asian_prob=asian_optimizer(matrix)
+
+        asian_prob=(asian_prob+home_prob)/2
+
+        asian_prob=calibrate_probability(asian_prob)
+
+        over_prob=calibrate_probability(over25_probability(matrix))
+        btts_prob=calibrate_probability(btts_probability(matrix))
+
+        odds=get_league_odds(f["league_id"])
+
+        if not odds:
+            continue
+
+        markets=[]
+
+        asian_odds=odds.get("Match Winner_Home")
+        over_odds=odds.get("Goals Over/Under_Over 2.5")
+        btts_odds=odds.get("Both Teams Score_Yes")
+
+        if asian_odds:
+            markets.append(("Asian Handicap",asian_prob,asian_odds,line))
+
+        if over_odds:
+            markets.append(("Over 2.5",over_prob,over_odds,None))
+
+        if btts_odds:
+            markets.append(("BTTS",btts_prob,btts_odds,None))
+
+        for market,prob,odds_value,line in markets:
+
+            implied=implied_probability(odds_value)
+            edge=prob-implied
+
+            if edge<0.04 or prob<0.56:
+                continue
+
+            ev=calculate_ev(prob,odds_value)
+
+            move=track_odds(f["fixture_id"],odds_value)
+            steam=detect_steam_move(f["fixture_id"],odds_value)
+
+            stake=kelly_stake(prob,odds_value)
+
+            confidence=(prob*50)+(edge*200)+(ev*100)
+
             if steam:
-                confidence += 10
-            if ev > 0.05:
+                confidence+=10
 
-                pick = market
+            if ev>0.05:
 
-                if market == "Asian Handicap":
-                    pick = f"Asian Handicap {f['home']} {line}"
-                bet_key = f"{f['fixture_id']}_{pick}"
+                pick=market
 
-                # αν το bet έχει ήδη σταλεί → skip
+                if market=="Asian Handicap":
+                    pick=f"Asian Handicap {f['home']} {line}"
+
+                bet_key=f"{f['fixture_id']}_{pick}"
+
                 if cursor.execute(
                     "SELECT key FROM sent_bets WHERE key=?",
                     (bet_key,)
                 ).fetchone():
                     continue
 
-                # αποθήκευση bet
                 cursor.execute(
                     "INSERT INTO sent_bets VALUES (?)",
                     (bet_key,)
                 )
 
                 db.commit()
+
                 candidates.append({
-                    "match": f"{f['home']} vs {f['away']}",
-                    "pick": pick,
-                    "prob": prob,
-                    "odds": odds_value,
-                    "ev": ev,
-                    "confidence": confidence
-                    "stake":stake,
+                    "match":f"{f['home']} vs {f['away']}",
+                    "pick":pick,
+                    "prob":prob,
+                    "odds":odds_value,
+                    "ev":ev,
+                    "confidence":confidence,
+                    "stake":stake
                 })
 
-    ranked = rank_bets(candidates)
+    ranked=rank_bets(candidates)
 
-    super_safe = None
-    high_value = []
+    super_safe=None
+    high_value=[]
 
     for bet in ranked:
 
-        if bet["prob"] >= 0.65 and not super_safe:
-            super_safe = bet
+        if bet["prob"]>=0.65 and not super_safe:
+            super_safe=bet
 
-        elif bet["prob"] >= 0.57:
+        elif bet["prob"]>=0.57:
             high_value.append(bet)
 
-    signals = []
+    signals=[]
 
     if super_safe:
 
@@ -245,9 +623,9 @@ f"""⭐ SUPER SAFE BET
 🎯 {super_safe['pick']}
 📊 Odds {round(super_safe['odds'],2)}
 📈 Probability {round(super_safe['prob']*100)}%
-💰 Value {round(super_safe['ev'],2)}"""
-💵 Stake {round(b['stake']*100,1)}% bankroll"""
-        )
+💰 Value {round(super_safe['ev'],2)}
+💵 Stake {round(super_safe['stake']*100,1)}% bankroll"""
+)
 
     for bet in high_value[:2]:
 
@@ -257,9 +635,9 @@ f"""🔥 HIGH VALUE
 🎯 {bet['pick']}
 📊 Odds {round(bet['odds'],2)}
 📈 Probability {round(bet['prob']*100)}%
-💰 Value {round(bet['ev'],2)}"""
-💵 Stake {round(b['stake']*100,1)}% bankroll"""
-        )
+💰 Value {round(bet['ev'],2)}
+💵 Stake {round(bet['stake']*100,1)}% bankroll"""
+)
 
     league_odds_cache.clear()
     team_stats_cache.clear()
