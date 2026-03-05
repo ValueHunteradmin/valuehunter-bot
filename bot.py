@@ -399,7 +399,40 @@ def btts_probability(matrix):
             prob+=p
 
     return prob
+    
+# ---------- OVER / UNDER ENGINE ----------
 
+def goal_totals_probability(matrix):
+
+    probs = {
+        "over1_5":0,
+        "over2_5":0,
+        "over3_5":0,
+        "under1_5":0,
+        "under2_5":0,
+        "under3_5":0
+    }
+
+    for h,a,p in matrix:
+
+        goals = h+a
+
+        if goals >= 2:
+            probs["over1_5"] += p
+        else:
+            probs["under1_5"] += p
+
+        if goals >= 3:
+            probs["over2_5"] += p
+        else:
+            probs["under2_5"] += p
+
+        if goals >= 4:
+            probs["over3_5"] += p
+        else:
+            probs["under3_5"] += p
+
+    return probs
 
 # ---------- ASIAN HANDICAP ----------
 
@@ -595,7 +628,27 @@ def kelly_stake(prob,odds):
 def rank_bets(bets):
     bets.sort(key=lambda x:x["confidence"],reverse=True)
     return bets
+    
+# ---------- BET CORRELATION FILTER ----------
 
+def correlation_filter(bets):
+
+    used_matches=set()
+
+    filtered=[]
+
+    for bet in bets:
+
+        match=bet["match"]
+
+        if match in used_matches:
+            continue
+
+        filtered.append(bet)
+
+        used_matches.add(match)
+
+    return filtered
 
 # ---------- VALUE ENGINE ----------
 
@@ -630,7 +683,7 @@ def get_value_bets():
             continue
 
         matrix=poisson_matrix(home_xg,away_xg)
-
+        totals = goal_totals_probability(matrix)
         total=sum(p for _,_,p in matrix)
         matrix=[(h,a,p/total) for h,a,p in matrix]
 
@@ -642,16 +695,31 @@ def get_value_bets():
 
         asian_prob=calibrate_probability(asian_prob)
 
-        over_prob=calibrate_probability(over25_probability(matrix))
-        btts_prob=calibrate_probability(btts_probability(matrix))
-
+        over25_prob = calibrate_probability(totals["over2_5"])
+        under25_prob = calibrate_probability(totals["under2_5"])
+        over15_prob = calibrate_probability(totals["over1_5"])
+        over35_prob = calibrate_probability(totals["over3_5"])
+        btts_prob = calibrate_probability(btts_probability(matrix))
         odds=get_league_odds(f["league_id"])
 
         if not odds:
             continue
 
         markets=[]
+        if over_odds:
+            markets.append(("Over 2.5",over25_prob,over_odds,None))
 
+        if under_odds:
+            markets.append(("Under 2.5",under25_prob,under_odds,None))
+
+        if over15_odds:
+            markets.append(("Over 1.5",over15_prob,over15_odds,None))
+
+        if over35_odds:
+            markets.append(("Over 3.5",over35_prob,over35_odds,None))
+
+        if btts_odds:
+            markets.append(("BTTS",btts_prob,btts_odds,None))
         asian_odds=odds.get("Match Winner_Home")
         over_odds=odds.get("Goals Over/Under_Over 2.5")
         btts_odds=odds.get("Both Teams Score_Yes")
@@ -727,6 +795,8 @@ def get_value_bets():
                 })
 
     ranked=rank_bets(candidates)
+    
+    ranked=correlation_filter(ranked)
 
     super_safe=None
     high_value=[]
