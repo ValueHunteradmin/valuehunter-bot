@@ -1319,14 +1319,14 @@ def send_signals():
         
         # ---------- MONTHLY REPORT ----------
 
-         if now.day == 1 and hour == 12 and minute == 0:
+        if now.day == 1 and hour == 12 and minute == 0:
 
-             report = monthly_report()
+            report = monthly_report()
 
-             send_secure_message(
-                 ADMIN_ID,
-                 report
-             )
+            send_secure_message(
+                ADMIN_ID,
+                report
+            )
 # ---------- SECURE SEND MESSAGE ----------
 
 def send_secure_message(user_id, text):
