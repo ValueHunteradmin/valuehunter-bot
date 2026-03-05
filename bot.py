@@ -5,17 +5,18 @@ import sqlite3
 import time
 import threading
 from flask import Flask, request
+import numpy as np
 import math
 # ================= CONFIG =================
 
-TOKEN = "YOUR_TELEGRAM_TOKEN"
-ADMIN_ID = 123456789
+TOKEN = "8767848071:AAHjxT7945VO-X7iCI3kG-0fIqC_giqX7Z8"
+ADMIN_ID = 8328070177
 
-FOOTBALL_API_KEY = "FOOTBALL_API_KEY"
-ODDS_API_KEY = "ODDS_API_KEY"
-NOWPAY_API_KEY = "NOWPAY_API_KEY"
+FOOTBALL_API_KEY = "2f8c79b66ceed85aaf20322308f11e5a"
+ODDS_API_KEY = "e55ba3ebd10f1d12494c0c10f1bfdb32"
+NOWPAY_API_KEY = "ZB43Y23-F3E4XKG-K83X2GC-MPAAHZ5"
 
-WEBHOOK_URL = "https://YOUR-RAILWAY-URL/payment-webhook"
+WEBHOOK_URL = "https://valuehunter-bot-production.up.railway.app/payment-webhook"
 
 bot = telebot.TeleBot(TOKEN)
 app = Flask(__name__)
@@ -181,34 +182,22 @@ def implied_probability(odds):
     return 1/odds
 # ================= VALUE ENGINE =================
 
-import math
-import random
-# ---------- LEAGUE FILTER ----------
+GOOD_LEAGUES = {39,78,140,135,61,94,88,203}
 
-GOOD_LEAGUES = {
-39,   # Premier League
-78,   # Bundesliga
-140,  # La Liga
-135,  # Serie A
-61,   # Ligue 1
-94,   # Portugal
-88,   # Netherlands
-203   # Turkey
+clv_history={}
+odds_history={}
+performance_stats={"wins":0,"losses":0}
+
+league_strength={
+39:1.05,
+78:1.08,
+135:0.95,
+140:1.00,
+61:0.97
 }
-# ---------- CLV STORAGE ----------
 
-clv_history = {}
-# ---------- LEAGUE STRENGTH MODEL ----------
-
-league_strength = {
-    39:1.05,   # Premier League
-    78:1.08,   # Bundesliga
-    135:0.95,  # Serie A
-    140:1.00,  # La Liga
-    61:0.97    # Ligue 1
-}
-odds_history = {}
-performance_stats = {"wins":0,"losses":0}
+def implied_probability(odds):
+    return 1/odds
 
 
 # ---------- MATCH SCANNER ----------
@@ -277,13 +266,6 @@ def get_injuries(team_id):
     return len(r["response"])
 
 
-# ---------- LINEUP IMPACT ----------
-
-def lineup_adjustment():
-
-    return random.uniform(-0.1,0.1)
-
-
 # ---------- TEAM STRENGTH ----------
 
 def team_strength(home_attack,home_defense,away_attack,away_defense):
@@ -298,17 +280,17 @@ def team_strength(home_attack,home_defense,away_attack,away_defense):
 
 def calculate_xg(home_strength,away_strength,league_id):
 
-    modifier = league_strength.get(league_id,1)
+    modifier=league_strength.get(league_id,1)
 
-    home_xg = home_strength * 1.15 * modifier
-    away_xg = away_strength * 0.95 * modifier
+    home_xg=home_strength*1.15*modifier
+    away_xg=away_strength*0.95*modifier
 
     return home_xg,away_xg
+
 
 # ---------- POISSON ----------
 
 def poisson(lmbda,k):
-
     return (lmbda**k*math.exp(-lmbda))/math.factorial(k)
 
 
@@ -324,71 +306,84 @@ def poisson_matrix(home_xg,away_xg):
             matrix.append((h,a,p))
 
     return matrix
-    if len(matrix) < 10:
-    continue
-    # ---------- OVER UNDER PROBABILITY ----------
+
+# ---------- MONTE CARLO SIMULATION ----------
+
+def monte_carlo_simulation(home_xg,away_xg,simulations=10000):
+
+    home_wins=0
+    draws=0
+    away_wins=0
+
+    for _ in range(simulations):
+
+        home_goals=np.random.poisson(home_xg)
+        away_goals=np.random.poisson(away_xg)
+
+        if home_goals>away_goals:
+            home_wins+=1
+
+        elif home_goals==away_goals:
+            draws+=1
+
+        else:
+            away_wins+=1
+
+    return (
+        home_wins/simulations,
+        draws/simulations,
+        away_wins/simulations
+    )
+# ---------- MARKET PROBABILITIES ----------
 
 def over25_probability(matrix):
 
     prob=0
 
     for h,a,p in matrix:
-
-        if h+a >=3:
+        if h+a>=3:
             prob+=p
 
     return prob
-    # ---------- BTTS PROBABILITY ----------
+
 
 def btts_probability(matrix):
 
     prob=0
 
     for h,a,p in matrix:
-
         if h>0 and a>0:
             prob+=p
 
     return prob
-# ---------- ASIAN HANDICAP PROBABILITY ----------
 
-def asian_probability(matrix):
 
-    win=0
-
-    for h,a,p in matrix:
-
-        if h>a:
-            win+=p
-
-    return win
-# ---------- ASIAN LINE OPTIMIZER ----------
+# ---------- ASIAN HANDICAP ----------
 
 def asian_optimizer(matrix):
 
-    lines = [-1, -0.75, -0.5, -0.25, 0, 0.25, 0.5]
+    lines=[-1,-0.75,-0.5,-0.25,0,0.25,0.5]
 
-    best_line = None
-    best_prob = 0
+    best_line=None
+    best_prob=0
 
     for line in lines:
 
-        prob = 0
+        prob=0
 
         for h,a,p in matrix:
 
-            goal_diff = h - a
+            if (h-a)>line:
+                prob+=p
 
-            if goal_diff > line:
-                prob += p
+        if prob>best_prob:
+            best_prob=prob
+            best_line=line
 
-        if prob > best_prob:
-            best_prob = prob
-            best_line = line
+    return best_line,best_prob
 
-    return best_line, best_prob
 
-# ---------- MULTI BOOKMAKER ODDS ----------
+# ---------- ODDS SCRAPER ----------
 
 def get_market_odds(fixture_id):
 
@@ -425,7 +420,8 @@ def get_market_odds(fixture_id):
 
     return odds
 
-# ---------- ODDS MOVEMENT TRACKER ----------
+
+# ---------- ODDS MOVEMENT ----------
 
 def track_odds(fixture_id,odds):
 
@@ -434,58 +430,28 @@ def track_odds(fixture_id,odds):
         return 0
 
     movement=odds_history[fixture_id]-odds
-
     odds_history[fixture_id]=odds
 
     return movement
 
 
-# ---------- SHARP BOOKMAKER DETECTION ----------
+# ---------- SHARP DETECTION ----------
 
-def sharp_detection(odds_move):
-
-    return odds_move>0.10
-
-
-# ---------- BOOKMAKER MARGIN REMOVAL ----------
-
-def remove_margin(prob):
-
-    margin=0.04
-    return prob/(1+margin)
+def sharp_detection(move):
+    return move>0.10
 
 
 # ---------- EV ----------
 
 def calculate_ev(prob,odds):
-
-    return(prob*odds)-1
-
-
-# ---------- CLV TRACKER ----------
-
-def clv(open_odds,closing_odds):
-
-    return closing_odds-open_odds
+    return (prob*odds)-1
 
 
-# ---------- AI BET RANKING ----------
+# ---------- BET RANKING ----------
 
 def rank_bets(bets):
-
     bets.sort(key=lambda x:x["score"],reverse=True)
-
     return bets
-
-
-# ---------- RESULT GRADING ----------
-
-def grade_result(result):
-
-    if result=="WIN":
-        performance_stats["wins"]+=1
-    else:
-        performance_stats["losses"]+=1
 
 
 # ---------- VALUE ENGINE ----------
@@ -497,9 +463,10 @@ def get_value_bets():
     candidates=[]
 
     for f in fixtures:
+
         if f["league_id"] not in GOOD_LEAGUES:
             continue
-            
+
         stats_home=get_team_stats(f["home_id"],f["league_id"])
         stats_away=get_team_stats(f["away_id"],f["league_id"])
 
@@ -515,79 +482,86 @@ def get_value_bets():
         home_attack-=injuries_home*0.05
         away_attack-=injuries_away*0.05
 
-        home_attack+=lineup_adjustment()
-        away_attack+=lineup_adjustment()
-
         home_strength,away_strength=team_strength(
-            home_attack,
-            home_defense,
-            away_attack,
-            away_defense
+            home_attack,home_defense,
+            away_attack,away_defense
         )
 
-        home_xg,away_xg=calculate_xg(home_strength,away_strength,f["league_id"])
-
+        home_xg,away_xg=calculate_xg(
+            home_strength,away_strength,
+            f["league_id"]
+        )
+        home_prob,draw_prob,away_prob = monte_carlo_simulation(home_xg,away_xg)
         matrix=poisson_matrix(home_xg,away_xg)
-        if len(matrix) < 20:
-            continue
-            
-        over_prob=over25_probability(matrix)
-        btts_prob=btts_probability(matrix)
-        # NORMALIZE PROBABILITIES
+
         total=sum(p for _,_,p in matrix)
         matrix=[(h,a,p/total) for h,a,p in matrix]
-        line, probability = asian_optimizer(matrix)#
 
-        probability=remove_margin(probability)
-        # MINIMUM PROBABILITY FILTER
-        if probability < 0.55:
-            continue
+        asian_line,asian_prob=asian_optimizer(matrix)
+
+        asian_prob = (asian_prob + home_prob) / 2
+        over_prob=over25_probability(matrix)
+        btts_prob=btts_probability(matrix)
+
         odds=get_market_odds(f["fixture_id"])
-        
-        if odds < 1.60 or odds > 2.40:
-        continue
+
         if not odds:
             continue
-            
-        asian_odds = odds.get("Match Winner_Home")
-        if not asian_odds:
-            continue
-            
-        if f["fixture_id"] not in clv_history:
-        clv_history[f["fixture_id"]] = asian_odds
-        implied_prob=1/odds
-        
-        # ===== 3 LINES USED BY PROFESSIONAL MODELS =====
 
-        implied_prob=implied_probability(asian_odds)
+        markets=[]
 
-        edge=probability-implied_prob
-        if edge < 0.04:
-            continue
+        asian_odds=odds.get("Match Winner_Home")
+        over_odds=odds.get("Goals Over/Under_Over 2.5")
+        btts_odds=odds.get("Both Teams Score_Yes")
 
-        ev=calculate_ev(probability,asian_odds)
+        if asian_odds:
+            markets.append(("Asian Handicap",asian_prob,asian_odds,asian_line))
 
-        odds_move=track_odds(f["fixture_id"],odds)
-        if odds_move > 0.20:
-            continue
-            
-        sharp=sharp_detection(odds_move)
+        if over_odds:
+            markets.append(("Over 2.5",over_prob,over_odds,None))
 
-        score = ev + (edge*2) + (probability*0.5)
+        if btts_odds:
+            markets.append(("BTTS",btts_prob,btts_odds,None))
 
-        if sharp:
-        score += 0.1
+        for market,prob,odds_value,line in markets:
 
-        if ev > 0.05 and probability > 0.57:
+            implied=implied_probability(odds_value)
+            edge=prob-implied
+            # ---------- MARKET EFFICIENCY FILTER ----------
 
-            candidates.append({
-                "match":f"{f['home']} vs {f['away']}",
-                "pick": f"Asian Handicap {f['home']} {line}",
-                "prob":probability,
-                "odds":odds,
-                "ev":ev,
-                "score":score
-            })
+            if odds_value < 1.60 or odds_value > 3.20:
+                continue
+            if edge<0.04:
+                continue
+            # minimum model confidence
+
+            if prob < 0.56:
+                continue
+            ev=calculate_ev(prob,odds_value)
+
+            move=track_odds(f["fixture_id"],odds_value)
+            sharp=sharp_detection(move)
+
+            score=ev+(edge*2)+(prob*0.5)
+
+            if sharp:
+                score+=0.1
+
+            if ev>0.05:
+
+                pick=market
+
+                if market=="Asian Handicap":
+                    pick=f"Asian Handicap {f['home']} {line}"
+
+                candidates.append({
+                    "match":f"{f['home']} vs {f['away']}",
+                    "pick":pick,
+                    "prob":prob,
+                    "odds":odds_value,
+                    "ev":ev,
+                    "score":score
+                })
 
     ranked=rank_bets(candidates)
 
@@ -597,18 +571,18 @@ def get_value_bets():
 
         tag=""
 
-if i==0:
-    tag="⭐ BEST BET\n"
-elif i<3:
-    tag="🔥 HIGH VALUE\n"
+        if i==0:
+            tag="⭐ BEST BET\n"
+        elif i<3:
+            tag="🔥 HIGH VALUE\n"
 
-signals.append(
+        signals.append(
 f"""{tag}⚽ {b['match']}
 🎯 {b['pick']}
 📊 Odds {round(b['odds'],2)}
 📈 Probability {round(b['prob']*100)}%
 💰 Value {round(b['ev'],2)}"""
-)
+        )
 
     return signals
 # ================= DAILY SAMPLE =================
