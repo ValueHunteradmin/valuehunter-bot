@@ -1437,7 +1437,7 @@ you are currently inside a **temporary entry window**.
             )
 
             bot.send_message(
-                c.message.chat.id
+                c.message.chat.id,
     """
     👑 VALUEHUNTER ELITE ACCESS
 
