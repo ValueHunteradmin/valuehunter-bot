@@ -861,12 +861,6 @@ def get_value_bets():
         if over35_odds:
             markets.append(("Over 3.5",over35_prob,over35_odds,None))
 
-        if btts_odds:
-            markets.append(("BTTS",btts_prob,btts_odds,None))
-        asian_odds=odds.get("Match Winner_Home")
-        over_odds=odds.get("Goals Over/Under_Over 2.5")
-        btts_odds=odds.get("Both Teams Score_Yes")
-
         if asian_odds:
             markets.append(("Asian Handicap",asian_prob,asian_odds,line))
 
@@ -948,15 +942,6 @@ def get_value_bets():
                      "confidence": confidence,
                      "stake": stake
                 })
-                db.commit()
-                    "match":f"{f['home']} vs {f['away']}",
-                    "pick":pick,
-                    "prob":prob,
-                    "odds":odds_value,
-                    "ev":ev,
-                    "confidence":confidence,
-                    "stake":stake
-                })
 
     ranked=rank_bets(candidates)
     
@@ -999,7 +984,7 @@ f"""🔥 HIGH VALUE
 📈 Probability {round(bet['prob']*100)}%
 💰 Value {round(bet['ev'],2)}
 💵 Stake {round(bet['stake']*100,1)}% bankroll
-🎰 Bet: 50€
+🎰 Bet: 50€"""
 )
 
     league_odds_cache.clear()
@@ -1259,26 +1244,24 @@ def send_signals():
         time.sleep(30)
         # ---------- MONTHLY REPORT ----------
 
-        if now.day == 1 and hour == 12 and minute == 0:
+         if now.day == 1 and hour == 12 and minute == 0:
 
-            report = monthly_report()
+             report = monthly_report()
 
-            send_secure_message(
-                ADMIN_ID,
-                "ADMIN SIGNALS\n\n" + "\n\n".join(bets[:3])
-            )
+             send_secure_message(
+                 ADMIN_ID,
+                 report
+             )
 # ---------- SECURE SEND MESSAGE ----------
 
-send_secure_message(uid, text)
+def send_secure_message(user_id, text):
 
     try:
-
         bot.send_message(
             user_id,
             text,
             protect_content=True
         )
-
     except:
         pass
 # ================= TELEGRAM =================
