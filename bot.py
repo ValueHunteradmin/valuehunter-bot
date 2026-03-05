@@ -204,39 +204,45 @@ def implied_probability(odds):
 
 def scan_matches():
 
-    url="https://v3.football.api-sports.io/fixtures?next=1200"
-    headers={"x-apisports-key":FOOTBALL_API_KEY}
-
-    try:
-        r=requests.get(url,headers=headers).json()
-    except:
-        return []
-
     fixtures=[]
 
-    for m in r["response"]:
+    for page in range(1,31):
 
-        fixtures.append({
-            "fixture_id":m["fixture"]["id"],
-            "home":m["teams"]["home"]["name"],
-            "away":m["teams"]["away"]["name"],
-            "home_id":m["teams"]["home"]["id"],
-            "away_id":m["teams"]["away"]["id"],
-            "league_id":m["league"]["id"]
-        })
+        url=f"https://v3.football.api-sports.io/fixtures?next=100&page={page}"
+        headers={"x-apisports-key":FOOTBALL_API_KEY}
+
+        try:
+            r=requests.get(url,headers=headers).json()
+            time.sleep(0.1)
+        except:
+            continue
+
+        for m in r["response"]:
+
+            fixtures.append({
+                "fixture_id":m["fixture"]["id"],
+                "home":m["teams"]["home"]["name"],
+                "away":m["teams"]["away"]["name"],
+                "home_id":m["teams"]["home"]["id"],
+                "away_id":m["teams"]["away"]["id"],
+                "league_id":m["league"]["id"]
+            })
 
     return fixtures
 
-
 # ---------- TEAM STATS ----------
-
+team_stats_cache = {}
 def get_team_stats(team_id,league_id):
+
+    if team_id in team_stats_cache:
+        return team_stats_cache[team_id]
 
     url=f"https://v3.football.api-sports.io/teams/statistics?team={team_id}&league={league_id}&season=2024"
     headers={"x-apisports-key":FOOTBALL_API_KEY}
 
     try:
         r=requests.get(url,headers=headers).json()
+        time.sleep(0.05)
     except:
         return None
 
@@ -248,24 +254,32 @@ def get_team_stats(team_id,league_id):
     attack=float(d["goals"]["for"]["average"]["total"])
     defense=float(d["goals"]["against"]["average"]["total"])
 
+    team_stats_cache[team_id]=(attack,defense)
+
     return attack,defense
-
-
+    
 # ---------- INJURY MODEL ----------
-
+injury_cache = {}
 def get_injuries(team_id):
+
+    if team_id in injury_cache:
+        return injury_cache[team_id]
 
     url=f"https://v3.football.api-sports.io/injuries?team={team_id}"
     headers={"x-apisports-key":FOOTBALL_API_KEY}
 
     try:
         r=requests.get(url,headers=headers).json()
+        time.sleep(0.05)
     except:
         return 0
 
-    return len(r["response"])
+    injuries=len(r["response"])
 
+    injury_cache[team_id]=injuries
 
+    return injuries
+    
 # ---------- TEAM STRENGTH ----------
 
 def team_strength(home_attack,home_defense,away_attack,away_defense):
@@ -385,42 +399,25 @@ def asian_optimizer(matrix):
 
 # ---------- ODDS SCRAPER ----------
 
-def get_market_odds(fixture_id):
+league_odds_cache={}
+def get_league_odds(league_id):
 
-    url=f"https://v3.football.api-sports.io/odds?fixture={fixture_id}"
+    if league_id in league_odds_cache:
+        return league_odds_cache[league_id]
+
+    url=f"https://v3.football.api-sports.io/odds?league={league_id}&season=2024"
     headers={"x-apisports-key":FOOTBALL_API_KEY}
 
     try:
         r=requests.get(url,headers=headers).json()
+        time.sleep(0.05)
     except:
         return None
 
-    if not r["response"]:
-        return None
+    league_odds_cache[league_id]=r
 
-    bookmakers=r["response"][0]["bookmakers"]
-
-    odds={}
-
-    for book in bookmakers:
-
-        for bet in book["bets"]:
-
-            market=bet["name"]
-
-            for v in bet["values"]:
-
-                key=f"{market}_{v['value']}"
-                odd=float(v["odd"])
-
-                if key not in odds:
-                    odds[key]=odd
-                else:
-                    odds[key]=max(odds[key],odd)
-
-    return odds
-
-
+    return r
+    
 # ---------- ODDS MOVEMENT ----------
 
 def track_odds(fixture_id,odds):
@@ -429,17 +426,22 @@ def track_odds(fixture_id,odds):
         odds_history[fixture_id]=odds
         return 0
 
-    movement=odds_history[fixture_id]-odds
+    old_odds=odds_history[fixture_id]
+
+    movement=old_odds-odds
+
     odds_history[fixture_id]=odds
 
     return movement
 
-
 # ---------- SHARP DETECTION ----------
 
 def sharp_detection(move):
-    return move>0.10
 
+    if move>0.15:
+        return True
+
+    return False
 
 # ---------- EV ----------
 
@@ -450,7 +452,7 @@ def calculate_ev(prob,odds):
 # ---------- BET RANKING ----------
 
 def rank_bets(bets):
-    bets.sort(key=lambda x:x["score"],reverse=True)
+    bets.sort(key=lambda x:x["confidence"],reverse=True)
     return bets
 
 
@@ -503,7 +505,7 @@ def get_value_bets():
         over_prob=over25_probability(matrix)
         btts_prob=btts_probability(matrix)
 
-        odds=get_market_odds(f["fixture_id"])
+        odds=get_league_odds(f["league_id"])
 
         if not odds:
             continue
@@ -542,7 +544,16 @@ def get_value_bets():
             move=track_odds(f["fixture_id"],odds_value)
             sharp=sharp_detection(move)
 
-            score=ev+(edge*2)+(prob*0.5)
+            # ---------- CONFIDENCE SCORE ----------
+
+            confidence = (
+            (prob * 50) +
+            (edge * 200) +
+            (ev * 100)
+            )
+
+            if sharp:
+                confidence += 5
 
             if sharp:
                 score+=0.1
@@ -561,30 +572,51 @@ def get_value_bets():
                     "odds":odds_value,
                     "ev":ev,
                     "score":score
+                    "confidence":confidence,
                 })
 
     ranked=rank_bets(candidates)
 
-    signals=[]
+    # ---------- BET CATEGORIES ----------
 
-    for i,b in enumerate(ranked[:10]):
+super_safe=None
+high_value=[]
 
-        tag=""
+for bet in ranked:
 
-        if i==0:
-            tag="⭐ BEST BET\n"
-        elif i<3:
-            tag="🔥 HIGH VALUE\n"
+    if bet["prob"]>=0.65 and not super_safe:
+        super_safe=bet
 
-        signals.append(
-f"""{tag}⚽ {b['match']}
-🎯 {b['pick']}
-📊 Odds {round(b['odds'],2)}
-📈 Probability {round(b['prob']*100)}%
-💰 Value {round(b['ev'],2)}"""
-        )
+    elif bet["prob"]>=0.57:
+        high_value.append(bet)
 
-    return signals
+# ---------- FINAL PICKS ----------
+
+signals=[]
+
+if super_safe:
+
+    signals.append(
+f"""⭐ SUPER SAFE BET
+⚽ {super_safe['match']}
+🎯 {super_safe['pick']}
+📊 Odds {round(super_safe['odds'],2)}
+📈 Probability {round(super_safe['prob']*100)}%
+💰 Value {round(super_safe['ev'],2)}"""
+)
+
+for bet in high_value[:2]:
+
+    signals.append(
+f"""🔥 HIGH VALUE
+⚽ {bet['match']}
+🎯 {bet['pick']}
+📊 Odds {round(bet['odds'],2)}
+📈 Probability {round(bet['prob']*100)}%
+💰 Value {round(bet['ev'],2)}"""
+)
+
+return signals
 # ================= DAILY SAMPLE =================
 
 def daily_sample():
