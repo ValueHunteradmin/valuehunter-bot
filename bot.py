@@ -18,6 +18,9 @@ FOOTBALL_API_KEY = "2f8c79b66ceed85aaf20322308f11e5a"
 ODDS_API_KEY = "e55ba3ebd10f1d12494c0c10f1bfdb32"
 NOWPAY_API_KEY = "ZB43Y23-F3E4XKG-K83X2GC-MPAAHZ5"
 
+START_BANKROLL = 2000
+BET_STAKE = 50
+
 WEBHOOK_URL = "https://valuehunter-bot-production.up.railway.app/payment-webhook"
 
 bot = telebot.TeleBot(TOKEN)
@@ -50,6 +53,13 @@ timestamp INTEGER
 cursor.execute("""
 CREATE TABLE IF NOT EXISTS sent_bets(
 key TEXT PRIMARY KEY
+)
+""")
+
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS free_sample(
+user_id INTEGER PRIMARY KEY,
+last_time INTEGER
 )
 """)
 
@@ -549,6 +559,21 @@ def predict_steam(prob, odds):
         return True
 
     return False
+    
+    # ---------- MARKET TIMING ENGINE ----------
+
+def market_timing_engine(prob, odds):
+
+    market_prob = 1 / odds
+
+    edge = prob - market_prob
+
+    # μεγάλο edge → πιθανό odds drop
+    if edge > 0.06 and prob > 0.60:
+        return True
+
+    return False
+    
 # ---------- CLV TRACKER ----------
 
 def track_clv(fixture_id,odds):
@@ -591,6 +616,22 @@ def market_efficiency_detector(prob, odds):
 
     # αγορά πολύ αποδοτική
     if diff < 0.015:
+        return False
+
+    return True
+    
+# ---------- LIQUIDITY FILTER ----------
+
+def liquidity_filter(league_id, odds):
+
+    # μεγάλες λίγκες έχουν υψηλή ρευστότητα
+    top_leagues = {39,78,140,135,61}
+
+    if league_id in top_leagues:
+        return True
+
+    # περίεργα odds σημαίνουν low liquidity
+    if odds < 1.30 or odds > 4.50:
         return False
 
     return True
@@ -729,7 +770,16 @@ def grade_results():
             "UPDATE bets_history SET result=? WHERE id=?",
             (outcome,bet_id)
         )
+        stake = 50
 
+        profit = -stake
+
+        if outcome == "WIN":
+            profit = (odds * stake) - stake
+            cursor.execute(
+            "UPDATE bets_history SET result=? WHERE id=?",
+            (outcome,bet_id)
+            )
         db.commit()
         
 # ---------- VALUE ENGINE ----------
@@ -787,7 +837,18 @@ def get_value_bets():
         if not odds:
             continue
 
+        odds=get_league_odds(f["league_id"])
+        asian_odds = odds.get("Match Winner_Home")
+        over_odds = odds.get("Goals Over/Under_Over 2.5")
+        under_odds = odds.get("Goals Over/Under_Under 2.5")
+        over15_odds = odds.get("Goals Over/Under_Over 1.5")
+        over35_odds = odds.get("Goals Over/Under_Over 3.5")
+        btts_odds = odds.get("Both Teams Score_Yes")
+
         markets=[]
+        if asian_odds:
+            markets.append(("Asian Handicap",asian_prob,asian_odds,line))
+
         if over_odds:
             markets.append(("Over 2.5",over25_prob,over_odds,None))
 
@@ -819,6 +880,8 @@ def get_value_bets():
 
             implied=implied_probability(odds_value)
             edge=prob-implied
+            if not liquidity_filter(f["league_id"], odds_value):
+                continue
             if not market_efficiency_detector(prob, odds_value):
                 continue
             pinnacle_signal = pinnacle_sharp_check(prob, odds_value)
@@ -834,6 +897,7 @@ def get_value_bets():
             clv = track_clv(f["fixture_id"], odds_value)
             
             stake=kelly_stake(prob,odds_value)
+            timing_signal = market_timing_engine(prob, odds_value)
             steam_prediction = predict_steam(prob, odds_value)
             confidence=(prob*50)+(edge*200)+(ev*100)
             if pinnacle_signal:
@@ -842,6 +906,8 @@ def get_value_bets():
                 confidence+=10
             if steam_prediction:
                 confidence += 7
+            if timing_signal:
+                confidence += 8
             if clv > 0.10:
                 confidence += 5
             if ev>0.05:
@@ -866,12 +932,22 @@ def get_value_bets():
 
                 db.commit()
 
-                candidates.append({
                 cursor.execute(
                     "INSERT INTO bets_history(match,pick,odds,result,timestamp) VALUES (?,?,?,?,?)",
                     (f"{f['home']} vs {f['away']}",pick,odds_value,"PENDING",int(time.time()))
                 )
 
+                db.commit()
+
+                candidates.append({
+                    "match":f"{f['home']} vs {f['away']}",
+                    "pick":pick,
+                    "prob":prob,
+                    "odds":odds_value,
+                    "ev":ev,
+                    "confidence":confidence,
+                    "stake":stake
+                })
                 db.commit()
                     "match":f"{f['home']} vs {f['away']}",
                     "pick":pick,
@@ -908,7 +984,9 @@ f"""⭐ SUPER SAFE BET
 📊 Odds {round(super_safe['odds'],2)}
 📈 Probability {round(super_safe['prob']*100)}%
 💰 Value {round(super_safe['ev'],2)}
-💵 Stake {round(super_safe['stake']*100,1)}% bankroll"""
+💵 Stake {round(super_safe['stake']*100,1)}% bankroll
+🎰 Bet: 50€"""
+
 )
 
     for bet in high_value[:2]:
@@ -920,7 +998,8 @@ f"""🔥 HIGH VALUE
 📊 Odds {round(bet['odds'],2)}
 📈 Probability {round(bet['prob']*100)}%
 💰 Value {round(bet['ev'],2)}
-💵 Stake {round(bet['stake']*100,1)}% bankroll"""
+💵 Stake {round(bet['stake']*100,1)}% bankroll
+🎰 Bet: 50€
 )
 
     league_odds_cache.clear()
@@ -930,14 +1009,46 @@ f"""🔥 HIGH VALUE
     return signals
 # ================= DAILY SAMPLE =================
 
-def daily_sample():
+def daily_sample(user_id):
+
+    now = int(time.time())
+
+    row = cursor.execute(
+        "SELECT last_time FROM free_sample WHERE user_id=?",
+        (user_id,)
+    ).fetchone()
+
+    # αν υπάρχει record
+    if row:
+
+        last_time = row[0]
+
+        # 48 ώρες = 172800 sec
+        if now - last_time < 172800:
+
+            remaining = 172800 - (now - last_time)
+
+            hours = remaining // 3600
+
+            return f"""
+⏳ Free sample already used.
+
+Next free bet available in {hours} hours.
+"""
 
     bets = get_value_bets()
 
-    if bets:
-        return bets[0]
+    if not bets:
+        return "No value today"
 
-    return "No value today"
+    cursor.execute(
+        "INSERT OR REPLACE INTO free_sample VALUES (?,?)",
+        (user_id, now)
+    )
+
+    db.commit()
+
+    return bets[0]
 
 # ================= MARKET ALERT =================
 
@@ -1019,6 +1130,73 @@ Losses: {wl}
 Profit: {round(wp,2)} units
 """
 
+# ---------- MONTHLY REPORT ----------
+
+def monthly_report():
+
+    now = int(time.time())
+    month = now - (86400 * 30)
+
+    rows = cursor.execute(
+        "SELECT odds,result FROM bets_history WHERE timestamp>?",
+        (month,)
+    ).fetchall()
+
+    wins = 0
+    losses = 0
+    profit = 0
+    stake = 50
+
+    for odds,result in rows:
+
+        if result == "WIN":
+            wins += 1
+            profit += (odds * stake) - stake
+
+        elif result == "LOSE":
+            losses += 1
+            profit -= stake
+
+    return f"""
+📊 MONTHLY REPORT
+
+Wins: {wins}
+Losses: {losses}
+
+Profit: {round(profit,2)} €
+"""
+
+# ---------- BANKROLL TRACKER ----------
+
+def bankroll_status():
+
+    rows = cursor.execute(
+        "SELECT odds,result FROM bets_history"
+    ).fetchall()
+
+    bankroll = START_BANKROLL
+
+    for odds,result in rows:
+
+        if result == "WIN":
+            bankroll += (odds * BET_STAKE) - BET_STAKE
+
+        elif result == "LOSE":
+            bankroll -= BET_STAKE
+
+    profit = bankroll - START_BANKROLL
+
+    roi = (profit / START_BANKROLL) * 100
+
+    return f"""
+📊 BANKROLL
+
+Starting: {START_BANKROLL}€
+Current: {round(bankroll,2)}€
+
+ROI: {round(roi,2)}%
+"""
+
 # ================= AUTO SIGNALS =================
 
 def send_signals():
@@ -1079,7 +1257,30 @@ def send_signals():
             vip_sent_today = False
 
         time.sleep(30)
+        # ---------- MONTHLY REPORT ----------
 
+        if now.day == 1 and hour == 12 and minute == 0:
+
+            report = monthly_report()
+
+            send_secure_message(
+                ADMIN_ID,
+                "ADMIN SIGNALS\n\n" + "\n\n".join(bets[:3])
+            )
+# ---------- SECURE SEND MESSAGE ----------
+
+send_secure_message(uid, text)
+
+    try:
+
+        bot.send_message(
+            user_id,
+            text,
+            protect_content=True
+        )
+
+    except:
+        pass
 # ================= TELEGRAM =================
 
 @bot.message_handler(commands=["start"])
@@ -1144,7 +1345,7 @@ def callbacks(c):
 
         bot.send_message(
             c.message.chat.id,
-            f"🎁 FREE SAMPLE\n\n{daily_sample()}"
+            f"🎁 FREE SAMPLE\n\n{daily_sample(c.message.chat.id)}"
         )
 
     elif c.data == "alert":
