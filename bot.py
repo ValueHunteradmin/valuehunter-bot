@@ -775,5 +775,8 @@ def callbacks(c):
 threading.Thread(target=send_signals).start()
 
 # ================= RUN =================
-
+threading.Thread(
+    target=lambda: app.run(host="0.0.0.0", port=8080),
+    daemon=True
+).start()
 bot.infinity_polling()
