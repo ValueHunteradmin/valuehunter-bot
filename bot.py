@@ -180,19 +180,20 @@ def webhook():
 
     bot.send_message(
         user_id,
-    """
-    🔥 PAYMENT CONFIRMED
+        """
+🔥 PAYMENT CONFIRMED
 
-     Welcome to VALUEHUNTER ELITE.
+Welcome to VALUEHUNTER ELITE.
 
-     🔑Your access is now active
+🔑Your access is now active
 
-     🕔 17:00 Model release
-     🕕 18:00 VIP signals
-     """
-     )
+🕔 17:00 Model release
+🕕 18:00 VIP signals
+"""
+    )
      
-     return "ok"
+    return "ok"
+    
 # ================= FOOTBALL DATA =================
 
 def get_matches():
