@@ -399,13 +399,15 @@ def asian_optimizer(matrix):
 
 # ---------- ODDS SCRAPER ----------
 
-league_odds_cache={}
+league_odds_cache = {}
+
 def get_league_odds(league_id):
 
     if league_id in league_odds_cache:
         return league_odds_cache[league_id]
 
     url=f"https://v3.football.api-sports.io/odds?league={league_id}&season=2024"
+
     headers={"x-apisports-key":FOOTBALL_API_KEY}
 
     try:
@@ -414,10 +416,25 @@ def get_league_odds(league_id):
     except:
         return None
 
-    league_odds_cache[league_id]=r
+    odds_map={}
 
-    return r
-    
+    for item in r["response"]:
+
+        fixture=item["fixture"]["id"]
+
+        for book in item["bookmakers"]:
+
+            for bet in book["bets"]:
+
+                for value in bet["values"]:
+
+                    key=f"{bet['name']}_{value['value']}"
+
+                    odds_map.setdefault(fixture,{})[key]=float(value["odd"])
+
+    league_odds_cache[league_id]=odds_map
+
+    return odds_map
 # ---------- ODDS MOVEMENT ----------
 
 def track_odds(fixture_id,odds):
@@ -505,11 +522,15 @@ def get_value_bets():
         over_prob=over25_probability(matrix)
         btts_prob=btts_probability(matrix)
 
-        odds=get_league_odds(f["league_id"])
+        league_odds = get_league_odds(f["league_id"])
+
+        if not league_odds:
+            continue
+
+        odds = league_odds.get(f["fixture_id"])
 
         if not odds:
             continue
-
         markets=[]
 
         asian_odds=odds.get("Match Winner_Home")
@@ -555,9 +576,6 @@ def get_value_bets():
             if sharp:
                 confidence += 5
 
-            if sharp:
-                score+=0.1
-
             if ev>0.05:
 
                 pick=market
@@ -571,18 +589,18 @@ def get_value_bets():
                     "prob":prob,
                     "odds":odds_value,
                     "ev":ev,
-                    "score":score
+                    "score":score,
                     "confidence":confidence,
                 })
 
     ranked=rank_bets(candidates)
-
+    
     # ---------- BET CATEGORIES ----------
-
-super_safe=None
-high_value=[]
-
-for bet in ranked:
+    
+    super_safe=None
+    high_value=[]
+    
+    for bet in ranked:
 
     if bet["prob"]>=0.65 and not super_safe:
         super_safe=bet
@@ -615,6 +633,12 @@ f"""🔥 HIGH VALUE
 📈 Probability {round(bet['prob']*100)}%
 💰 Value {round(bet['ev'],2)}"""
 )
+
+# ---------- CLEAR CACHE ----------
+
+league_odds_cache.clear()
+team_stats_cache.clear()
+injury_cache.clear()
 
 return signals
 # ================= DAILY SAMPLE =================
