@@ -568,32 +568,31 @@ def get_value_bets():
             # ---------- CONFIDENCE SCORE ----------
 
             confidence = (
-            (prob * 50) +
-            (edge * 200) +
-            (ev * 100)
+                (prob * 50) +
+                (edge * 200) +
+                (ev * 100)
             )
 
             if sharp:
                 confidence += 5
 
-            if ev>0.05:
+            if ev > 0.05:
 
-                pick=market
+                pick = market
 
-                if market=="Asian Handicap":
-                    pick=f"Asian Handicap {f['home']} {line}"
+                if market == "Asian Handicap":
+                    pick = f"Asian Handicap {f['home']} {line}"
 
                 candidates.append({
-                    "match":f"{f['home']} vs {f['away']}",
-                    "pick":pick,
-                    "prob":prob,
-                    "odds":odds_value,
-                    "ev":ev,
-                    "score":score,
-                    "confidence":confidence,
+                    "match": f"{f['home']} vs {f['away']}",
+                    "pick": pick,
+                    "prob": prob,
+                    "odds": odds_value,
+                    "ev": ev,
+                    "confidence": confidence
                 })
 
-     ranked = rank_bets(candidates)
+    ranked = rank_bets(candidates)
 
     super_safe = None
     high_value = []
