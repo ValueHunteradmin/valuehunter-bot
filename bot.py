@@ -29,7 +29,11 @@ app = Flask(__name__)
 
 # ================= DATABASE =================
 
-db = sqlite3.connect("database.db", check_same_thread=False)
+db = sqlite3.connect(
+"database.db",
+check_same_thread=False,
+timeout=30
+)
 cursor = db.cursor()
 
 cursor.execute("""
@@ -209,7 +213,7 @@ def get_matches():
 
     matches = []
 
-    for m in r["response"]:
+    for m in r.get("response", []):
 
         home = m["teams"]["home"]["name"]
         away = m["teams"]["away"]["name"]
@@ -250,7 +254,7 @@ def scan_matches():
 
     fixtures=[]
 
-    for page in range(1,31):
+    for page in range(1,6):
 
         url=f"https://v3.football.api-sports.io/fixtures?next=100&page={page}"
         headers={"x-apisports-key":FOOTBALL_API_KEY}
@@ -261,7 +265,7 @@ def scan_matches():
         except:
             continue
 
-        for m in r["response"]:
+        for m in r.get("response", []):
 
             match_time=m["fixture"]["timestamp"]
             now=int(time.time())
@@ -296,8 +300,8 @@ def get_team_stats(team_id,league_id):
     except:
         return None
 
-    if not r["response"]:
-        return None
+    if not r.get("response"):
+    return None
 
     d=r["response"]
 
@@ -375,7 +379,7 @@ def poisson_matrix(home_xg,away_xg):
 
 # ---------- MONTE CARLO ----------
 
-def monte_carlo_simulation(home_xg,away_xg,simulations=10000):
+def monte_carlo_simulation(home_xg,away_xg,simulations=3000):
 
     home_wins=0
 
@@ -516,7 +520,7 @@ def get_league_odds(league_id):
 
     odds_data={}
 
-    for game in r["response"]:
+    for game in r.get("response", []):
 
         fixture_id=game["fixture"]["id"]
 
@@ -747,7 +751,7 @@ def grade_results():
         except:
             continue
 
-        if not r["response"]:
+        if not r.get("response"):
             continue
 
         game = r["response"][0]
@@ -944,7 +948,7 @@ def get_value_bets():
                 odds_value
             )
 
-            if edge < 0.04 or prob < 0.56:
+            if edge < 0.05 or prob < 0.56:
                 continue
 
             ev = calculate_ev(prob, odds_value)
@@ -1334,6 +1338,7 @@ def send_signals():
                 text = "🔥 VIP SIGNALS\n\n" + "\n\n".join(picks)
 
                 bot.send_message(uid, text)
+                time.sleep(0.05)
 
             vip_sent_today = True
 
@@ -1412,13 +1417,27 @@ you are currently inside a **temporary entry window**.
         reply_markup=main_menu()
     )
 
-@bot.callback_query_handler(func=lambda c:True)
-def callbacks(c):
+    @bot.callback_query_handler(func=lambda c: True)
+    def callbacks(c):
 
-    if c.data == "elite":
+        if c.data == "elite":
 
-        bot.send_message(
-            c.message.chat.id,
+            m = InlineKeyboardMarkup()
+
+            m.add(
+            InlineKeyboardButton("🥉 BASIC 50€", callback_data="buy_basic")
+            )
+
+            m.add(
+            InlineKeyboardButton("🥇 PRO 100€", callback_data="buy_pro")
+            )
+
+            m.add(
+            InlineKeyboardButton("⚡ DAY PASS 25€", callback_data="buy_day")
+            )
+
+            bot.send_message(
+                c.message.chat.id
     """
     👑 VALUEHUNTER ELITE ACCESS
 
