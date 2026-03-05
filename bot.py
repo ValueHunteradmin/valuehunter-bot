@@ -772,72 +772,86 @@ def grade_results():
         )
         stake = 50
 
-        profit = -stake
-
-        if outcome == "WIN":
-            profit = (odds * stake) - stake
-            cursor.execute(
+        cursor.execute(
             "UPDATE bets_history SET result=? WHERE id=?",
             (outcome,bet_id)
-            )
+        )
         db.commit()
         
 # ---------- VALUE ENGINE ----------
 
 def get_value_bets():
 
-    fixtures=scan_matches()
+    fixtures = scan_matches()
 
-    candidates=[]
+    candidates = []
 
     for f in fixtures:
 
         if f["league_id"] not in GOOD_LEAGUES:
             continue
 
-        stats_home=get_team_stats(f["home_id"],f["league_id"])
-        stats_away=get_team_stats(f["away_id"],f["league_id"])
+        stats_home = get_team_stats(f["home_id"], f["league_id"])
+        stats_away = get_team_stats(f["away_id"], f["league_id"])
 
         if not stats_home or not stats_away:
             continue
 
-        home_attack,home_defense=stats_home
-        away_attack,away_defense=stats_away
+        home_attack, home_defense = stats_home
+        away_attack, away_defense = stats_away
 
-        home_attack-=get_injuries(f["home_id"])*0.05
-        away_attack-=get_injuries(f["away_id"])*0.05
+        home_attack -= get_injuries(f["home_id"]) * 0.05
+        away_attack -= get_injuries(f["away_id"]) * 0.05
 
-        hs,as_=team_strength(home_attack,home_defense,away_attack,away_defense)
+        hs, as_ = team_strength(
+            home_attack,
+            home_defense,
+            away_attack,
+            away_defense
+        )
 
-        home_xg,away_xg=calculate_xg(hs,as_,f["league_id"])
-        
-        if not model_sanity_filter(home_xg,away_xg):
+        home_xg, away_xg = calculate_xg(
+            hs,
+            as_,
+            f["league_id"]
+        )
+
+        if not model_sanity_filter(home_xg, away_xg):
             continue
 
-        matrix=poisson_matrix(home_xg,away_xg)
+        matrix = poisson_matrix(home_xg, away_xg)
+
         totals = goal_totals_probability(matrix)
-        total=sum(p for _,_,p in matrix)
-        matrix=[(h,a,p/total) for h,a,p in matrix]
 
-        home_prob=monte_carlo_simulation(home_xg,away_xg)
+        total = sum(p for _, _, p in matrix)
+        matrix = [(h, a, p / total) for h, a, p in matrix]
 
-        line,asian_prob=asian_optimizer(matrix)
+        home_prob = monte_carlo_simulation(home_xg, away_xg)
 
-        asian_prob=(asian_prob+home_prob)/2
+        line, asian_prob = asian_optimizer(matrix)
 
-        asian_prob=calibrate_probability(asian_prob)
+        asian_prob = (asian_prob + home_prob) / 2
+        asian_prob = calibrate_probability(asian_prob)
 
         over25_prob = calibrate_probability(totals["over2_5"])
         under25_prob = calibrate_probability(totals["under2_5"])
         over15_prob = calibrate_probability(totals["over1_5"])
         over35_prob = calibrate_probability(totals["over3_5"])
-        btts_prob = calibrate_probability(btts_probability(matrix))
-        odds=get_league_odds(f["league_id"])
+
+        btts_prob = calibrate_probability(
+            btts_probability(matrix)
+        )
+
+        league_odds = get_league_odds(f["league_id"])
+
+        if not league_odds:
+            continue
+
+        odds = league_odds.get(f["fixture_id"])
 
         if not odds:
             continue
 
-        odds=get_league_odds(f["league_id"])
         asian_odds = odds.get("Match Winner_Home")
         over_odds = odds.get("Goals Over/Under_Over 2.5")
         under_odds = odds.get("Goals Over/Under_Under 2.5")
@@ -845,120 +859,185 @@ def get_value_bets():
         over35_odds = odds.get("Goals Over/Under_Over 3.5")
         btts_odds = odds.get("Both Teams Score_Yes")
 
-        markets=[]
+        markets = []
+
         if asian_odds:
-            markets.append(("Asian Handicap",asian_prob,asian_odds,line))
+            markets.append(
+                ("Asian Handicap", asian_prob, asian_odds, line)
+            )
 
         if over_odds:
-            markets.append(("Over 2.5",over25_prob,over_odds,None))
+            markets.append(
+                ("Over 2.5", over25_prob, over_odds, None)
+            )
 
         if under_odds:
-            markets.append(("Under 2.5",under25_prob,under_odds,None))
+            markets.append(
+                ("Under 2.5", under25_prob, under_odds, None)
+            )
 
         if over15_odds:
-            markets.append(("Over 1.5",over15_prob,over15_odds,None))
+            markets.append(
+                ("Over 1.5", over15_prob, over15_odds, None)
+            )
 
         if over35_odds:
-            markets.append(("Over 3.5",over35_prob,over35_odds,None))
-
-        if asian_odds:
-            markets.append(("Asian Handicap",asian_prob,asian_odds,line))
-
-        if over_odds:
-            markets.append(("Over 2.5",over_prob,over_odds,None))
+            markets.append(
+                ("Over 3.5", over35_prob, over35_odds, None)
+            )
 
         if btts_odds:
-            markets.append(("BTTS",btts_prob,btts_odds,None))
+            markets.append(
+                ("BTTS", btts_prob, btts_odds, None)
+            )
 
-        for market,prob,odds_value,line in markets:
+        for market, prob, odds_value, line in markets:
 
-            implied=implied_probability(odds_value)
-            edge=prob-implied
-            if not liquidity_filter(f["league_id"], odds_value):
-                continue
-            if not market_efficiency_detector(prob, odds_value):
-                continue
-            pinnacle_signal = pinnacle_sharp_check(prob, odds_value)
-            if not market_consensus_filter(prob,odds_value):
-                continue
-            if edge<0.04 or prob<0.56:
+            implied = implied_probability(odds_value)
+
+            edge = prob - implied
+
+            if not liquidity_filter(
+                f["league_id"],
+                odds_value
+            ):
                 continue
 
-            ev=calculate_ev(prob,odds_value)
+            if not market_efficiency_detector(
+                prob,
+                odds_value
+            ):
+                continue
 
-            move=track_odds(f["fixture_id"],odds_value)
-            steam=detect_steam_move(f["fixture_id"],odds_value)
-            clv = track_clv(f["fixture_id"], odds_value)
-            
-            stake=kelly_stake(prob,odds_value)
-            timing_signal = market_timing_engine(prob, odds_value)
-            steam_prediction = predict_steam(prob, odds_value)
-            confidence=(prob*50)+(edge*200)+(ev*100)
+            if not market_consensus_filter(
+                prob,
+                odds_value
+            ):
+                continue
+
+            pinnacle_signal = pinnacle_sharp_check(
+                prob,
+                odds_value
+            )
+
+            if edge < 0.04 or prob < 0.56:
+                continue
+
+            ev = calculate_ev(prob, odds_value)
+
+            move = track_odds(
+                f["fixture_id"],
+                odds_value
+            )
+
+            steam = detect_steam_move(
+                f["fixture_id"],
+                odds_value
+            )
+
+            clv = track_clv(
+                f["fixture_id"],
+                odds_value
+            )
+
+            stake = kelly_stake(
+                prob,
+                odds_value
+            )
+
+            timing_signal = market_timing_engine(
+                prob,
+                odds_value
+            )
+
+            steam_prediction = predict_steam(
+                prob,
+                odds_value
+            )
+
+            confidence = (
+                (prob * 50) +
+                (edge * 200) +
+                (ev * 100)
+            )
+
             if pinnacle_signal:
                 confidence += 6
+
             if steam:
-                confidence+=10
+                confidence += 10
+
             if steam_prediction:
                 confidence += 7
+
             if timing_signal:
                 confidence += 8
+
             if clv > 0.10:
                 confidence += 5
-            if ev > 0.05:
 
-                pick = market
+            if ev <= 0.05:
+                continue
 
-                if market == "Asian Handicap":
-                    pick = f"Asian Handicap {f['home']} {line}"
+            pick = market
 
-                bet_key = f"{f['fixture_id']}_{pick}"
+            if market == "Asian Handicap":
+                pick = f"Asian Handicap {f['home']} {line}"
 
-                if cursor.execute(
-                   "SELECT key FROM sent_bets WHERE key=?",
-                   (bet_key,)
-                 ).fetchone():
-                     continue
+            bet_key = f"{f['fixture_id']}_{pick}"
 
-                 cursor.execute(
-                     "INSERT INTO sent_bets VALUES (?)",
-                     (bet_key,)
-                 )
+            if cursor.execute(
+                "SELECT key FROM sent_bets WHERE key=?",
+                (bet_key,)
+            ).fetchone():
+                continue
 
-                 db.commit()
+            cursor.execute(
+                "INSERT INTO sent_bets VALUES (?)",
+                (bet_key,)
+            )
 
-                cursor.execute(
-                    "INSERT INTO bets_history(match,pick,odds,result,timestamp) VALUES (?,?,?,?,?)",
-                    (f"{f['home']} vs {f['away']}", pick, odds_value, "PENDING", int(time.time()))
+            db.commit()
+
+            cursor.execute(
+                "INSERT INTO bets_history(match,pick,odds,result,timestamp) VALUES (?,?,?,?,?)",
+                (
+                    f"{f['home']} vs {f['away']}",
+                    pick,
+                    odds_value,
+                    "PENDING",
+                    int(time.time())
                 )
+            )
 
-                 db.commit()
+            db.commit()
 
-                 candidates.append({
-                     "match": f"{f['home']} vs {f['away']}",
-                     "pick": pick,
-                     "prob": prob,
-                     "odds": odds_value,
-                     "ev": ev,
-                     "confidence": confidence,
-                     "stake": stake
-                })
+            candidates.append({
+                "match": f"{f['home']} vs {f['away']}",
+                "pick": pick,
+                "prob": prob,
+                "odds": odds_value,
+                "ev": ev,
+                "confidence": confidence,
+                "stake": stake
+            })
 
-    ranked=rank_bets(candidates)
-    
-    ranked=correlation_filter(ranked)
+    ranked = rank_bets(candidates)
 
-    super_safe=None
-    high_value=[]
+    ranked = correlation_filter(ranked)
+
+    super_safe = None
+    high_value = []
 
     for bet in ranked:
 
-        if bet["prob"]>=0.65 and not super_safe:
-            super_safe=bet
+        if bet["prob"] >= 0.65 and not super_safe:
+            super_safe = bet
 
-        elif bet["prob"]>=0.57:
+        elif bet["prob"] >= 0.57:
             high_value.append(bet)
 
-    signals=[]
+    signals = []
 
     if super_safe:
 
@@ -971,8 +1050,7 @@ f"""⭐ SUPER SAFE BET
 💰 Value {round(super_safe['ev'],2)}
 💵 Stake {round(super_safe['stake']*100,1)}% bankroll
 🎰 Bet: 50€"""
-
-)
+        )
 
     for bet in high_value[:2]:
 
@@ -985,13 +1063,14 @@ f"""🔥 HIGH VALUE
 💰 Value {round(bet['ev'],2)}
 💵 Stake {round(bet['stake']*100,1)}% bankroll
 🎰 Bet: 50€"""
-)
+        )
 
     league_odds_cache.clear()
     team_stats_cache.clear()
     injury_cache.clear()
 
     return signals
+    
 # ================= DAILY SAMPLE =================
 
 def daily_sample(user_id):
