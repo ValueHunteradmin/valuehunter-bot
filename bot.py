@@ -649,7 +649,89 @@ def correlation_filter(bets):
         used_matches.add(match)
 
     return filtered
+    
+# ---------- RESULT GRADER ----------
 
+def grade_results():
+
+    rows = cursor.execute(
+        "SELECT id,match,pick,result FROM bets_history WHERE result='PENDING'"
+    ).fetchall()
+
+    for bet_id,match,pick,result in rows:
+
+        home,away = match.split(" vs ")
+
+        url = "https://v3.football.api-sports.io/fixtures"
+
+        headers = {"x-apisports-key":FOOTBALL_API_KEY}
+
+        params = {
+            "team":home,
+            "last":1
+        }
+
+        try:
+            r = requests.get(url,headers=headers,params=params).json()
+        except:
+            continue
+
+        if not r["response"]:
+            continue
+
+        game = r["response"][0]
+
+        if game["fixture"]["status"]["short"] != "FT":
+            continue
+
+        home_goals = game["goals"]["home"]
+        away_goals = game["goals"]["away"]
+
+        outcome = "LOSE"
+
+        # ---------- ASIAN HANDICAP ----------
+
+        if "Asian Handicap" in pick:
+
+            line = float(pick.split()[-1])
+
+            diff = home_goals - away_goals
+
+            if diff > line:
+                outcome = "WIN"
+
+        # ---------- OVER ----------
+
+        elif "Over" in pick:
+
+            line = float(pick.split()[-1])
+
+            if home_goals + away_goals > line:
+                outcome = "WIN"
+
+        # ---------- UNDER ----------
+
+        elif "Under" in pick:
+
+            line = float(pick.split()[-1])
+
+            if home_goals + away_goals < line:
+                outcome = "WIN"
+
+        # ---------- BTTS ----------
+
+        elif "BTTS" in pick:
+
+            if home_goals > 0 and away_goals > 0:
+                outcome = "WIN"
+
+        cursor.execute(
+            "UPDATE bets_history SET result=? WHERE id=?",
+            (outcome,bet_id)
+        )
+
+        db.commit()
+        
 # ---------- VALUE ENGINE ----------
 
 def get_value_bets():
@@ -785,6 +867,12 @@ def get_value_bets():
                 db.commit()
 
                 candidates.append({
+                cursor.execute(
+                    "INSERT INTO bets_history(match,pick,odds,result,timestamp) VALUES (?,?,?,?,?)",
+                    (f"{f['home']} vs {f['away']}",pick,odds_value,"PENDING",int(time.time()))
+                )
+
+                db.commit()
                     "match":f"{f['home']} vs {f['away']}",
                     "pick":pick,
                     "prob":prob,
@@ -877,28 +965,58 @@ Heavy betting activity detected.
 
 def performance():
 
-    wins = cursor.execute(
-        "SELECT COUNT(*) FROM bets_history WHERE result='WIN'"
-    ).fetchone()[0]
+    now = int(time.time())
+    day = now - 86400
+    week = now - (86400 * 7)
 
-    losses = cursor.execute(
-        "SELECT COUNT(*) FROM bets_history WHERE result='LOSE'"
-    ).fetchone()[0]
+    # daily
+    daily = cursor.execute(
+        "SELECT odds,result FROM bets_history WHERE timestamp>?",
+        (day,)
+    ).fetchall()
 
-    total = wins+losses
+    # weekly
+    weekly = cursor.execute(
+        "SELECT odds,result FROM bets_history WHERE timestamp>?",
+        (week,)
+    ).fetchall()
 
-    if total == 0:
-        return "No stats yet"
+    def calc_profit(data):
 
-    winrate = round((wins/total)*100)
+        wins=0
+        losses=0
+        profit=0
+
+        for odds,result in data:
+
+            if result=="WIN":
+                wins+=1
+                profit+=odds-1
+
+            elif result=="LOSE":
+                losses+=1
+                profit-=1
+
+        return wins,losses,profit
+
+    dw,dl,dp = calc_profit(daily)
+    ww,wl,wp = calc_profit(weekly)
 
     return f"""
-📊 NETWORK PERFORMANCE
+📊 DAILY PERFORMANCE
 
-Wins: {wins}
-Losses: {losses}
+Wins: {dw}
+Losses: {dl}
 
-Win Rate: {winrate}%
+Profit: {round(dp,2)} units
+
+
+📈 WEEKLY PERFORMANCE
+
+Wins: {ww}
+Losses: {wl}
+
+Profit: {round(wp,2)} units
 """
 
 # ================= AUTO SIGNALS =================
@@ -911,7 +1029,7 @@ def send_signals():
     vip_sent_today = False
 
     while True:
-
+        grade_results()
         now = datetime.now(tz)
 
         hour = now.hour
