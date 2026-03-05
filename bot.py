@@ -910,43 +910,43 @@ def get_value_bets():
                 confidence += 8
             if clv > 0.10:
                 confidence += 5
-            if ev>0.05:
+            if ev > 0.05:
 
-                pick=market
+                pick = market
 
-                if market=="Asian Handicap":
-                    pick=f"Asian Handicap {f['home']} {line}"
+                if market == "Asian Handicap":
+                    pick = f"Asian Handicap {f['home']} {line}"
 
-                bet_key=f"{f['fixture_id']}_{pick}"
+                bet_key = f"{f['fixture_id']}_{pick}"
 
                 if cursor.execute(
-                    "SELECT key FROM sent_bets WHERE key=?",
-                    (bet_key,)
-                ).fetchone():
-                    continue
+                   "SELECT key FROM sent_bets WHERE key=?",
+                   (bet_key,)
+                 ).fetchone():
+                     continue
 
-                cursor.execute(
-                    "INSERT INTO sent_bets VALUES (?)",
-                    (bet_key,)
-                )
+                 cursor.execute(
+                     "INSERT INTO sent_bets VALUES (?)",
+                     (bet_key,)
+                 )
 
-                db.commit()
+                 db.commit()
 
                 cursor.execute(
                     "INSERT INTO bets_history(match,pick,odds,result,timestamp) VALUES (?,?,?,?,?)",
-                    (f"{f['home']} vs {f['away']}",pick,odds_value,"PENDING",int(time.time()))
+                    (f"{f['home']} vs {f['away']}", pick, odds_value, "PENDING", int(time.time()))
                 )
 
-                db.commit()
+                 db.commit()
 
-                candidates.append({
-                    "match":f"{f['home']} vs {f['away']}",
-                    "pick":pick,
-                    "prob":prob,
-                    "odds":odds_value,
-                    "ev":ev,
-                    "confidence":confidence,
-                    "stake":stake
+                 candidates.append({
+                     "match": f"{f['home']} vs {f['away']}",
+                     "pick": pick,
+                     "prob": prob,
+                     "odds": odds_value,
+                     "ev": ev,
+                     "confidence": confidence,
+                     "stake": stake
                 })
                 db.commit()
                     "match":f"{f['home']} vs {f['away']}",
