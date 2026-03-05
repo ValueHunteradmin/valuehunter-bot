@@ -9,6 +9,7 @@ import threading
 from flask import Flask, request
 import numpy as np
 import math
+import os
 # ================= CONFIG =================
 
 TOKEN = "8767848071:AAHjxT7945VO-X7iCI3kG-0fIqC_giqX7Z8"
@@ -1436,7 +1437,7 @@ def callbacks(c):
 threading.Thread(target=send_signals, daemon=True).start()
 
 threading.Thread(
-    target=lambda: app.run(host="0.0.0.0", port=8080),
+    target=lambda: app.run(host="0.0.0.0", port=int(os.environ.get("PORT",8080))),
     daemon=True
 ).start()
 
