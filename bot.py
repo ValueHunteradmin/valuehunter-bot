@@ -593,13 +593,11 @@ def get_value_bets():
                     "confidence":confidence,
                 })
 
-    ranked=rank_bets(candidates)
-    
-    # ---------- BET CATEGORIES ----------
-    
-    super_safe=None
-    high_value=[]
-    
+     ranked = rank_bets(candidates)
+
+    super_safe = None
+    high_value = []
+
     for bet in ranked:
 
         if bet["prob"] >= 0.65 and not super_safe:
@@ -608,39 +606,35 @@ def get_value_bets():
         elif bet["prob"] >= 0.57:
             high_value.append(bet)
 
-# ---------- FINAL PICKS ----------
+    signals = []
 
-signals=[]
+    if super_safe:
 
-if super_safe:
-
-    signals.append(
+        signals.append(
 f"""⭐ SUPER SAFE BET
 ⚽ {super_safe['match']}
 🎯 {super_safe['pick']}
 📊 Odds {round(super_safe['odds'],2)}
 📈 Probability {round(super_safe['prob']*100)}%
 💰 Value {round(super_safe['ev'],2)}"""
-)
+        )
 
-for bet in high_value[:2]:
+    for bet in high_value[:2]:
 
-    signals.append(
+        signals.append(
 f"""🔥 HIGH VALUE
 ⚽ {bet['match']}
 🎯 {bet['pick']}
 📊 Odds {round(bet['odds'],2)}
 📈 Probability {round(bet['prob']*100)}%
 💰 Value {round(bet['ev'],2)}"""
-)
+        )
 
-# ---------- CLEAR CACHE ----------
+    league_odds_cache.clear()
+    team_stats_cache.clear()
+    injury_cache.clear()
 
-league_odds_cache.clear()
-team_stats_cache.clear()
-injury_cache.clear()
-
-return signals
+    return signals
 # ================= DAILY SAMPLE =================
 
 def daily_sample():
