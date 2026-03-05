@@ -358,7 +358,25 @@ def calibrate_probability(prob):
 
     return calibrated
 
+# ---------- MODEL SANITY FILTER ----------
 
+def model_sanity_filter(home_xg, away_xg):
+
+    total_xg = home_xg + away_xg
+
+    # πολύ χαμηλό tempo παιχνίδι
+    if total_xg < 1.6:
+        return False
+
+    # πολύ υψηλό tempo (unstable poisson)
+    if total_xg > 4.5:
+        return False
+
+    # πολύ μονόπλευρο παιχνίδι
+    if abs(home_xg - away_xg) > 2.2:
+        return False
+
+    return True
 # ---------- MARKET PROBABILITIES ----------
 
 def over25_probability(matrix):
@@ -461,13 +479,16 @@ def get_league_odds(league_id):
 def track_odds(fixture_id,odds):
 
     if fixture_id not in odds_history:
-        odds_history[fixture_id]=odds
+        odds_history[fixture_id] = odds
         return 0
 
-    move=odds_history[fixture_id]-odds
-    odds_history[fixture_id]=odds
+    old_odds = odds_history[fixture_id]
 
-    return move
+    movement = old_odds - odds
+
+    odds_history[fixture_id] = odds
+
+    return movement
 
 
 # ---------- STEAM DETECTOR ----------
@@ -482,7 +503,19 @@ def detect_steam_move(fixture_id,odds):
     steam_history[fixture_id]=odds
 
     return drop>=0.20
+# ---------- STEAM PREDICTOR ----------
 
+def predict_steam(prob, odds):
+
+    market_prob = 1 / odds
+
+    edge = prob - market_prob
+
+    # αν το model διαφωνεί έντονα με την αγορά
+    if edge > 0.08 and prob > 0.60:
+        return True
+
+    return False
 # ---------- CLV TRACKER ----------
 
 def track_clv(fixture_id,odds):
@@ -514,6 +547,33 @@ def market_consensus_filter(prob,odds):
         return False
 
     return True
+    
+# ---------- MARKET EFFICIENCY DETECTOR ----------
+
+def market_efficiency_detector(prob, odds):
+
+    market_prob = 1 / odds
+
+    diff = abs(prob - market_prob)
+
+    # αγορά πολύ αποδοτική
+    if diff < 0.015:
+        return False
+
+    return True
+    
+# ---------- PINNACLE SHARP COMPARISON ----------
+
+def pinnacle_sharp_check(prob, odds):
+
+    pinnacle_prob = 1 / odds
+
+    edge = prob - pinnacle_prob
+
+    if edge > 0.03:
+        return True
+
+    return False
     
 # ---------- KELLY ----------
 
@@ -565,6 +625,9 @@ def get_value_bets():
         hs,as_=team_strength(home_attack,home_defense,away_attack,away_defense)
 
         home_xg,away_xg=calculate_xg(hs,as_,f["league_id"])
+        
+        if not model_sanity_filter(home_xg,away_xg):
+            continue
 
         matrix=poisson_matrix(home_xg,away_xg)
 
@@ -606,6 +669,9 @@ def get_value_bets():
 
             implied=implied_probability(odds_value)
             edge=prob-implied
+            if not market_efficiency_detector(prob, odds_value):
+                continue
+            pinnacle_signal = pinnacle_sharp_check(prob, odds_value)
             if not market_consensus_filter(prob,odds_value):
                 continue
             if edge<0.04 or prob<0.56:
@@ -618,13 +684,16 @@ def get_value_bets():
             clv = track_clv(f["fixture_id"], odds_value)
             
             stake=kelly_stake(prob,odds_value)
-
+            steam_prediction = predict_steam(prob, odds_value)
             confidence=(prob*50)+(edge*200)+(ev*100)
-
+            if pinnacle_signal:
+                confidence += 6
             if steam:
                 confidence+=10
-                
-
+            if steam_prediction:
+                confidence += 7
+            if clv > 0.10:
+                confidence += 5
             if ev>0.05:
 
                 pick=market
