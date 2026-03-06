@@ -1586,18 +1586,18 @@ def send_signals():
             Secure access before the release.
             """
 
-                for uid, plan in users:
+            for uid, plan in users:
 
-                    try:
-                        bot.send_message(
-                            uid,
-                            text,
-                            reply_markup=keyboard
-                        )
-                        time.sleep(0.05)
-                    except:
-                        pass
-
+                try:
+                    bot.send_message(
+                        uid,
+                        text,
+                        reply_markup=keyboard
+                    )
+                    time.sleep(0.05)
+                except:
+                    pass
+                    
         # ---------- VIP 18:00 ----------
 
         if hour == 18 and minute == 0 and not vip_sent_today:
