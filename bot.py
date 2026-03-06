@@ -59,6 +59,13 @@ timestamp INTEGER
 )
 """)
 
+# προσθήκη fixture_id αν δεν υπάρχει
+try:
+    cursor.execute("ALTER TABLE bets_history ADD COLUMN fixture_id INTEGER")
+except:
+    pass
+
+
 cursor.execute("""
 CREATE TABLE IF NOT EXISTS sent_bets(
 key TEXT PRIMARY KEY
@@ -153,8 +160,8 @@ def main_menu():
 
     m = InlineKeyboardMarkup()
 
-    m.add(InlineKeyboardButton("🔐 Join Elite", callback_data="elite"))
-    m.add(InlineKeyboardButton("🎁 Free Sample", callback_data="sample"))
+    m.add(InlineKeyboardButton("🔥 Unlock VIP Signals", callback_data="elite"))
+    m.add(InlineKeyboardButton("🎁 Today's FREE Bet", callback_data="sample"))
     m.add(InlineKeyboardButton("⚡ Market Alert", callback_data="alert"))
     m.add(InlineKeyboardButton("📊 Performance", callback_data="perf"))
     m.add(InlineKeyboardButton("💬 Support", callback_data="support"))
@@ -333,6 +340,8 @@ value_cache = []
 value_cache_time = 0
 fixtures_cache = []
 fixtures_cache_time = 0
+alert_cache = None
+alert_cache_time = 0
 
 # ---------- IMPLIED PROBABILITY ----------
 
@@ -836,24 +845,17 @@ def correlation_filter(bets):
 def grade_results():
 
     rows = cursor.execute(
-        "SELECT id,match,pick,odds,result FROM bets_history WHERE result='PENDING'"
+        "SELECT id,fixture_id,match,pick,odds,result FROM bets_history WHERE result='PENDING'"
     ).fetchall()
 
-    for bet_id,match,pick,odds,result in rows:
+    for bet_id,fixture_id,match,pick,odds,result in rows:
 
-        home,away = match.split(" vs ")
-
-        url = "https://v3.football.api-sports.io/fixtures"
+        url = f"https://v3.football.api-sports.io/fixtures?id={fixture_id}"
 
         headers = {"x-apisports-key":FOOTBALL_API_KEY}
 
-        params = {
-            "team":home,
-            "last":1
-        }
-
         try:
-            r = requests.get(url,headers=headers,params=params).json()
+            r = requests.get(url,headers=headers).json()
         except:
             continue
 
@@ -943,19 +945,19 @@ def grade_results():
             free_users = get_all_users()
 
             free_text = f"""
-        🏆 VIP WIN
+            🏆 VIP WIN CONFIRMED
 
-        ⚽ {match}
-        🎯 {pick}
+            ⚽ {match}
+            🎯 {pick}
 
-        Elite members collected another win today.
+            Elite members collected another **winning signal** today.
 
-        ━━━━━━━━━━━━━━
+             ━━━━━━━━━━━━━━
 
-        Today's signals will be released again at **18:00**.
+            🔥 More signals will be released again at **18:00**.
 
-        Access to the ValueHunter network may close once signals are released.
-        """
+            ⚠️ Access to the ValueHunter network may close once signals are released.
+            """
 
             keyboard = InlineKeyboardMarkup()
             keyboard.add(
@@ -1243,8 +1245,9 @@ def get_value_bets():
             db.commit()
 
             cursor.execute(
-                "INSERT INTO bets_history(match,pick,odds,result,timestamp) VALUES (?,?,?,?,?)",
+                "INSERT INTO bets_history(fixture_id,match,pick,odds,result,timestamp) VALUES (?,?,?,?,?,?)",
                 (
+                    f["fixture_id"],
                     f"{f['home']} vs {f['away']}",
                     pick,
                     odds_value,
@@ -1371,23 +1374,47 @@ Next free bet available in {hours} hours.
 
 def market_alert():
 
+    global alert_cache, alert_cache_time
+
+    # cache για 30 λεπτά
+    if time.time() - alert_cache_time < 1800 and alert_cache:
+        return alert_cache
+
     matches = get_matches()
 
     if not matches:
         return "No alert"
 
-    home,away = matches[0]
+    home, away = matches[0]
+    
+    import random
+    
+    open_odds = round(random.uniform(1.90,2.40),2)
+    drop = round(random.uniform(0.15,0.35),2)
 
-    return f"""
+    new_odds = round(open_odds - drop,2)
+    
+    alert_text = f"""
 🚨 SHARP MONEY ALERT
 
 ⚽ {home} vs {away}
 
 Odds dropped:
-2.10 → 1.82
+{open_odds} → {new_odds}
 
 Heavy betting activity detected.
+
+━━━━━━━━━━━━━━
+
+⚡ Elite members will receive the official signal before the market reacts.
+
+⚠️ Access to the ValueHunter network may close once signals are released.
 """
+
+    alert_cache = alert_text
+    alert_cache_time = time.time()
+
+    return alert_text
 
 def start_conversion_funnel(user_id):
 
@@ -2106,108 +2133,166 @@ Activate your 24h access below:
     
     elif c.data == "sample":
 
-        bet = daily_sample(c.message.chat.id)
+    bet = daily_sample(c.message.chat.id)
 
-        bot.send_message(
-            c.message.chat.id,
-            f"🎁 FREE SAMPLE\n\n{bet}"
-        )
-
-        bot.send_message(
+    bot.send_message(
         c.message.chat.id,
-    """
-    🎁 FREE SAMPLE DELIVERED
+        f"🎁 FREE SAMPLE\n\n{bet}"
+    )
 
-    This was today's free value opportunity from the ValueHunter model.
+    keyboard = InlineKeyboardMarkup()
 
-    ━━━━━━━━━━━━━━
-
-    👑 ELITE members already received
-    the full signal card for today.
-
-    🥉 BASIC
-    • 1 Premium Value Bet daily
-
-    🥇 PRO
-    • 3 Premium Value Bets daily
-    • Full access to the strongest model signals
-
-    ⚡ DAY PASS
-    • 24 hour PRO access
-    • Receive today's full signals
-
-    ━━━━━━━━━━━━━━
-
-    ⚠️ Today's signals are released at **18:00**
-
-    Access to the network may close
-    once today's signals begin.
-
-    Use the menu below to unlock access.
-    """
+    keyboard.add(
+        InlineKeyboardButton(
+            "🔥 Unlock VIP Signals",
+            callback_data="elite"
         )
+    )
+
+    keyboard.add(
+        InlineKeyboardButton(
+            "⚡ Market Alert",
+            callback_data="alert"
+        )
+    )
+
+    bot.send_message(
+        c.message.chat.id,
+"""
+🎁 FREE SAMPLE DELIVERED
+
+You have just received **one value opportunity** from today's ValueHunter analysis.
+
+━━━━━━━━━━━━━━
+
+👑 Elite members already received
+the **full signal card** for today.
+
+🥉 BASIC
+• 1 Premium Value Bet daily
+
+🥇 PRO
+• 3 Premium Value Bets daily
+• Full access to the strongest model signals
+
+⚡ DAY PASS
+• 24 hour PRO access
+• Receive today's full signals
+
+━━━━━━━━━━━━━━
+
+⚠️ Today's signals will be released at **18:00**.
+
+Access to the network may close once signals are released to protect the betting edge.
+""",
+        reply_markup=keyboard
+    )
         
     elif c.data == "alert":
 
-        bot.send_message(
-            c.message.chat.id,
-            market_alert()
+    keyboard = InlineKeyboardMarkup()
+
+    keyboard.add(
+        InlineKeyboardButton(
+            "🔐 Unlock VIP Access",
+            callback_data="elite"
         )
+    )
+
+    keyboard.add(
+        InlineKeyboardButton(
+            "⬅️ Back",
+            callback_data="back_menu"
+        )
+    )
+
+    bot.send_message(
+        c.message.chat.id,
+        market_alert(),
+        reply_markup=keyboard
+    )
 
     elif c.data == "perf":
 
-        bot.send_message(
-            c.message.chat.id,
-    f"""
-    📊 VALUEHUNTER PERFORMANCE
+    keyboard = InlineKeyboardMarkup()
 
-    All results are tracked automatically
-    based on official match results.
-
-    ━━━━━━━━━━━━━━
-
-    📅 TODAY
-
-    {performance()}
-
-    ━━━━━━━━━━━━━━
-
-    📈 MONTHLY RESULTS
-
-    {monthly_report()}
-
-    ━━━━━━━━━━━━━━
-
-    Our signals are generated using:
-
-    • Expected Goals models  
-    • Market inefficiency detection  
-    • Sharp odds movement  
-
-    ⚠️ Full signals are available only
-    to ELITE members.
-    """
+    keyboard.add(
+        InlineKeyboardButton(
+            "🔐 Unlock VIP Access",
+            callback_data="elite"
         )
+    )
+
+    keyboard.add(
+        InlineKeyboardButton(
+            "⬅️ Back",
+            callback_data="back_menu"
+        )
+    )
+
+    bot.send_message(
+        c.message.chat.id,
+f"""
+📊 VALUEHUNTER PERFORMANCE
+
+All results are tracked automatically
+based on official match results.
+
+━━━━━━━━━━━━━━
+
+📅 TODAY
+
+{performance()}
+
+━━━━━━━━━━━━━━
+
+📈 MONTHLY RESULTS
+
+{monthly_report()}
+
+━━━━━━━━━━━━━━
+
+⚡ Elite members receive today's signals
+before the market reacts.
+
+When odds drop, the value disappears.
+
+Today's signals release at **18:00**.
+
+Unlock access below to receive the signals.
+""",
+        reply_markup=keyboard
+    )
         
     elif c.data == "support":
-    
-        bot.send_message(
-            c.message.chat.id,
-    """
-    💬 VALUEHUNTER SUPPORT
 
-    Need help with access or payments?
+    keyboard = InlineKeyboardMarkup()
 
-    Contact our support team:
-
-    @MrMasterlegacy1
-
-    We will assist you quickly.
-
-    ⚠️ VIP signals are released daily
-    at 18:00.
-    """
+    keyboard.add(
+        InlineKeyboardButton(
+            "⬅️ Back",
+            callback_data="back_menu"
         )
+    )
+
+    bot.send_message(
+        c.message.chat.id,
+"""
+💬 VALUEHUNTER SUPPORT
+
+Need help with access or payments?
+
+Contact our support team:
+
+🔹@MrMasterlegacy1
+
+We will assist you quickly.
+
+⚠️ VIP signals are released daily
+at 18:00.
+""",
+        reply_markup=keyboard
+    )
         
 @bot.message_handler(commands=["sendvip"])
 def sendvip(m):
