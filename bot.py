@@ -20,7 +20,7 @@ ODDS_API_KEY = "e55ba3ebd10f1d12494c0c10f1bfdb32"
 NOWPAY_API_KEY = "ZB43Y23-F3E4XKG-K83X2GC-MPAAHZ5"
 
 START_BANKROLL = 2000
-stake = BET_STAKE
+stake = 50
 
 WEBHOOK_URL = "https://valuehunter-bot-production.up.railway.app/payment-webhook"
 
