@@ -913,9 +913,9 @@ def grade_results():
                         free_text,
                         reply_markup=keyboard
                     )
-                   time.sleep(0.05)
-               except:
-                   pass
+                    time.sleep(0.05)
+                except:
+                    pass
                     
 # ---------- VALUE ENGINE ----------
 
