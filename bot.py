@@ -1184,7 +1184,7 @@ def get_value_bets():
                 "odds": odds_value,
                 "ev": ev,
                 "confidence": confidence,
-                "stake": stake
+                "stake": stake,
                 "early": early_text
             })
 
