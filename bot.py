@@ -2232,7 +2232,7 @@ def sendvip(m):
 
     bot.send_message(m.chat.id,"VIP signals sent.")
     
-    @bot.message_handler(commands=["stats"])
+@bot.message_handler(commands=["stats"])
 def stats(m):
 
     if m.chat.id != ADMIN_ID:
