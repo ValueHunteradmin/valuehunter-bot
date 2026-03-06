@@ -1420,21 +1420,22 @@ def performance():
         (week,)
     ).fetchall()
 
-    def calc_profit(data):
+def calc_profit(data):
 
-        wins=0
-        losses=0
-        profit=0
+    wins = 0
+    losses = 0
+    profit = 0
+    stake = 50
 
-        for odds,result in data:
+    for odds, result in data:
 
-            if result=="WIN":
-                wins+=1
-                profit+=odds-1
+        if result == "WIN":
+            wins += 1
+            profit += (odds * stake) - stake
 
-            elif result=="LOSE":
-                losses+=1
-                profit-=1
+        elif result == "LOSE":
+            losses += 1
+            profit -= stake
 
         return wins,losses,profit
 
@@ -1447,7 +1448,7 @@ def performance():
 Wins: {dw}
 Losses: {dl}
 
-Profit: {round(dp,2)} units
+Profit: {round(dp,2)} €
 
 
 📈 WEEKLY PERFORMANCE
@@ -1455,7 +1456,7 @@ Profit: {round(dp,2)} units
 Wins: {ww}
 Losses: {wl}
 
-Profit: {round(wp,2)} units
+Profit: {round(wp,2)} €
 """
 
 # ---------- MONTHLY REPORT ----------
@@ -1602,6 +1603,8 @@ def send_signals():
 
         if hour == 18 and minute == 0 and not vip_sent_today:
 
+            vip_sent_today = True 
+            
             users = get_vip_users()
 
             for uid, plan in users:
@@ -1623,7 +1626,7 @@ def send_signals():
 
         # reset κάθε μέρα
 
-        if hour == 0 and minute == 5:
+        if hour == 0 and minute == 0:
             admin_sent_today = False
             vip_sent_today = False
 
