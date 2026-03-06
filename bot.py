@@ -2133,60 +2133,60 @@ Activate your 24h access below:
     
     elif c.data == "sample":
 
-    bet = daily_sample(c.message.chat.id)
+        bet = daily_sample(c.message.chat.id)
 
-    bot.send_message(
-        c.message.chat.id,
-        f"🎁 FREE SAMPLE\n\n{bet}"
-    )
-
-    keyboard = InlineKeyboardMarkup()
-
-    keyboard.add(
-        InlineKeyboardButton(
-            "🔥 Unlock VIP Signals",
-            callback_data="elite"
+        bot.send_message(
+            c.message.chat.id,
+            f"🎁 FREE SAMPLE\n\n{bet}"
         )
-    )
 
-    keyboard.add(
-        InlineKeyboardButton(
-            "⚡ Market Alert",
-            callback_data="alert"
+        keyboard = InlineKeyboardMarkup()
+
+        keyboard.add(
+            InlineKeyboardButton(
+                "🔥 Unlock VIP Signals",
+                callback_data="elite"
+            )
         )
-    )
 
-    bot.send_message(
-        c.message.chat.id,
-"""
-🎁 FREE SAMPLE DELIVERED
+        keyboard.add(
+            InlineKeyboardButton(
+                "⚡ Market Alert",
+                callback_data="alert"
+            )
+        )
 
-You have just received **one value opportunity** from today's ValueHunter analysis.
+        bot.send_message(
+            c.message.chat.id,
+    """
+    🎁 FREE SAMPLE DELIVERED
 
-━━━━━━━━━━━━━━
+    You have just received **one value opportunity** from today's ValueHunter analysis.
 
-👑 Elite members already received
-the **full signal card** for today.
+    ━━━━━━━━━━━━━━
 
-🥉 BASIC
-• 1 Premium Value Bet daily
+    👑 Elite members already received
+    the **full signal card** for today.
 
-🥇 PRO
-• 3 Premium Value Bets daily
-• Full access to the strongest model signals
+    🥉 BASIC
+    • 1 Premium Value Bet daily
 
-⚡ DAY PASS
-• 24 hour PRO access
-• Receive today's full signals
+    🥇 PRO
+    • 3 Premium Value Bets daily
+    • Full access to the strongest model signals
 
-━━━━━━━━━━━━━━
+    ⚡ DAY PASS
+    • 24 hour PRO access
+    • Receive today's full signals
 
-⚠️ Today's signals will be released at **18:00**.
+    ━━━━━━━━━━━━━━
 
-Access to the network may close once signals are released to protect the betting edge.
-""",
-        reply_markup=keyboard
-    )
+    ⚠️ Today's signals will be released at **18:00**.
+
+    Access to the network may close once signals are released to protect the betting edge.
+    """,
+            reply_markup=keyboard
+        )
         
     elif c.data == "alert":
 
