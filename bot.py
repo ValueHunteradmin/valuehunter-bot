@@ -1889,7 +1889,7 @@ def start(m):
 
     bot.send_message(
         m.chat.id,
-        """
+"""
 🔓 WELCOME TO VALUEHUNTER
 
 You have just entered a **private betting intelligence network**.
@@ -1922,34 +1922,31 @@ you are currently inside a **temporary entry window**.
 
 🔔 Today's signals will be released at 18:00.
 ⬇️ Use the menu below to explore the platform.
-
 """,
         reply_markup=main_menu()
     )
+
     start_conversion_funnel(m.chat.id)
+
 
 @bot.callback_query_handler(func=lambda c: True)
 def callbacks(c):
+
+    bot.answer_callback_query(c.id)
+
+# ================= ELITE PLANS =================
 
     if c.data == "elite":
 
         m = InlineKeyboardMarkup()
 
-        m.add(
-        InlineKeyboardButton("🥉 BASIC 50€", callback_data="buy_basic")
-        )
+        m.add(InlineKeyboardButton("🥉 BASIC 50€", callback_data="buy_basic"))
+        m.add(InlineKeyboardButton("🥇 PRO 100€", callback_data="buy_pro"))
+        m.add(InlineKeyboardButton("⚡ DAY PASS 25€", callback_data="buy_day"))
+        m.add(InlineKeyboardButton("⬅️ Back to plans", callback_data="back_menu"))
 
-        m.add(
-        InlineKeyboardButton("🥇 PRO 100€", callback_data="buy_pro")
-        )
-
-        m.add(
-        InlineKeyboardButton("⚡ DAY PASS 25€", callback_data="buy_day")
-        )
-
-        bot.send_message(
-            c.message.chat.id,
-            """
+        bot.edit_message_text(
+"""
 👑 VALUEHUNTER ELITE ACCESS
 
 Our system scans hundreds of matches daily
@@ -1962,7 +1959,6 @@ high probability value opportunities.
 
 • 1 Premium Value Bet per day  
 • Selected from the highest model edge  
-• Ideal for consistent long term betting  
 
 ━━━━━━━━━━━━━━
 
@@ -1970,7 +1966,6 @@ high probability value opportunities.
 
 • 3 Premium Value Bets per day  
 • Full access to the model's top signals  
-• Highest expected ROI  
 
 ━━━━━━━━━━━━━━
 
@@ -1981,16 +1976,20 @@ high probability value opportunities.
 
 ⚠️ Access is limited to members.
 Signals are released daily at 18:00.
-🔹 Members are already betting today's signals.
 """,
+            c.message.chat.id,
+            c.message.message_id,
             reply_markup=m
         )
 
+# ================= BASIC =================
+
     elif c.data == "buy_basic":
 
-        link = create_payment(50,c.message.chat.id)
+        link = create_payment(50, c.message.chat.id)
 
         keyboard = InlineKeyboardMarkup()
+
         keyboard.add(
             InlineKeyboardButton(
                 "💳 Pay with Card / Crypto",
@@ -1998,46 +1997,36 @@ Signals are released daily at 18:00.
             )
         )
 
+        keyboard.add(
+            InlineKeyboardButton(
+                "⬅️ Back to plans",
+                callback_data="elite"
+            )
+        )
+
         bot.send_message(
             c.message.chat.id,
-            f"""
-    🥉 BASIC ACCESS
+"""
+🥉 BASIC ACCESS
 
-    You are about to unlock VALUEHUNTER BASIC membership.
+You are about to unlock VALUEHUNTER BASIC membership.
 
-    This plan gives you access to:
+• 1 Premium Value Bet per day  
+• Selected from the highest model edge  
 
-    📊 1 Premium Value Bet per day  
-    📈 Selected from the highest model edge  
-    ⚙️ Generated using advanced football analytics  
-    🎯 Focused on long-term profitable betting  
-
-    ━━━━━━━━━━━━━━
-
-    Signals are released daily at:
-
-    🕔 17:00 — Model analysis  
-    🕕 18:00 — Official signal release
-
-    ━━━━━━━━━━━━━━
-
-    ⚠️ IMPORTANT
-
-    Membership slots are **limited** to maintain
-    signal efficiency and market advantage.
-
-    Members are already preparing today's bets.
-
-    Secure your access below:
-    """,
+Signals released daily at 18:00.
+""",
             reply_markup=keyboard
         )
+
+# ================= PRO =================
 
     elif c.data == "buy_pro":
 
-        link = create_payment(100,c.message.chat.id)
+        link = create_payment(100, c.message.chat.id)
 
         keyboard = InlineKeyboardMarkup()
+
         keyboard.add(
             InlineKeyboardButton(
                 "💳 Pay with Card / Crypto",
@@ -2045,50 +2034,35 @@ Signals are released daily at 18:00.
             )
         )
 
+        keyboard.add(
+            InlineKeyboardButton(
+                "⬅️ Back to plans",
+                callback_data="elite"
+            )
+        )
+
         bot.send_message(
             c.message.chat.id,
-            f"""
-    🥇 VALUEHUNTER PRO ACCESS
+"""
+🥇 VALUEHUNTER PRO ACCESS
 
-    You are about to activate PRO membership.
+• 3 Premium Value Bets daily  
+• Highest model edge opportunities  
+• Full access to the model signals  
 
-    This is the **full access tier** of the ValueHunter network.
-
-    ━━━━━━━━━━━━━━
-
-    With PRO you receive:
-
-    📊 3 Premium Value Bets every day  
-    📈 Highest model edge opportunities  
-    📡 Sharp odds movement detection  
-    ⚙️ Advanced football analytics  
-
-    Signals are selected from hundreds of matches analyzed daily.
-
-    ━━━━━━━━━━━━━━
-
-    📅 SIGNAL SCHEDULE
-
-    🕔 17:00 — Model analysis  
-    🕕 18:00 — VIP signals released  
-
-    ━━━━━━━━━━━━━━
-
-    ⚠️ PRO membership capacity is limited
-    to maintain signal efficiency.
-
-    Most members choose PRO for full access.
-
-    Activate your access below:
-    """,
+Signals released daily at 18:00.
+""",
             reply_markup=keyboard
         )
-    
+
+# ================= DAY PASS =================
+
     elif c.data == "buy_day":
 
-        link = create_payment(25,c.message.chat.id)
+        link = create_payment(25, c.message.chat.id)
 
         keyboard = InlineKeyboardMarkup()
+
         keyboard.add(
             InlineKeyboardButton(
                 "💳 Pay with Card / Crypto",
@@ -2096,41 +2070,28 @@ Signals are released daily at 18:00.
             )
         )
 
+        keyboard.add(
+            InlineKeyboardButton(
+                "⬅️ Back to plans",
+                callback_data="elite"
+            )
+        )
+
         bot.send_message(
             c.message.chat.id,
-            f"""
-    ⚡ VALUEHUNTER DAY PASS
+"""
+⚡ VALUEHUNTER DAY PASS
 
-    You are about to activate 24 hour PRO access.
+• 24 hour PRO access  
+• Up to 3 premium signals today  
 
-    This pass allows you to experience the **full ValueHunter system** for one day.
-
-    ━━━━━━━━━━━━━━
-
-    With the DAY PASS you receive:
-
-    📊 Up to 3 Premium Value Bets today  
-    📈 Highest model edge opportunities  
-    📡 Sharp odds movement detection  
-    ⚙️ Advanced football analytics  
-
-    ━━━━━━━━━━━━━━
-
-    📅 SIGNAL SCHEDULE
-
-    🕔 17:00 — Model analysis  
-    🕕 18:00 — VIP signals released  
-
-    ━━━━━━━━━━━━━━
-
-    ⚠️ DAY PASS availability is limited
-    during active signal days.
-
-    Activate your 24h access below:
-    """,
+Signals released at 18:00.
+""",
             reply_markup=keyboard
         )
-    
+
+# ================= SAMPLE =================
+
     elif c.data == "sample":
 
         bet = daily_sample(c.message.chat.id)
@@ -2158,36 +2119,19 @@ Signals are released daily at 18:00.
 
         bot.send_message(
             c.message.chat.id,
-            """
-    🎁 FREE SAMPLE DELIVERED
+"""
+🎁 FREE SAMPLE DELIVERED
 
-    You have just received **one value opportunity** from today's ValueHunter analysis.
+Elite members already received
+the full signal card for today.
 
-    ━━━━━━━━━━━━━━
-
-    👑 Elite members already received
-    the **full signal card** for today.
-
-    🥉 BASIC
-    • 1 Premium Value Bet daily
-
-    🥇 PRO
-    • 3 Premium Value Bets daily
-    • Full access to the strongest model signals
-
-    ⚡ DAY PASS
-    • 24 hour PRO access
-    • Receive today's full signals
-
-    ━━━━━━━━━━━━━━
-
-    ⚠️ Today's signals will be released at **18:00**.
-
-    Access to the network may close once signals are released to protect the betting edge.
-    """,
+Unlock VIP access to receive all signals.
+""",
             reply_markup=keyboard
         )
-        
+
+# ================= ALERT =================
+
     elif c.data == "alert":
 
         keyboard = InlineKeyboardMarkup()
@@ -2201,7 +2145,7 @@ Signals are released daily at 18:00.
 
         keyboard.add(
             InlineKeyboardButton(
-                "⬅️ Back",
+                "⬅️ Back to plans",
                 callback_data="back_menu"
             )
         )
@@ -2211,6 +2155,8 @@ Signals are released daily at 18:00.
             market_alert(),
             reply_markup=keyboard
         )
+
+# ================= PERFORMANCE =================
 
     elif c.data == "perf":
 
@@ -2225,7 +2171,7 @@ Signals are released daily at 18:00.
 
         keyboard.add(
             InlineKeyboardButton(
-                "⬅️ Back",
+                "⬅️ Back to plans",
                 callback_data="back_menu"
             )
         )
@@ -2233,65 +2179,51 @@ Signals are released daily at 18:00.
         bot.send_message(
             c.message.chat.id,
             f"""
-    📊 VALUEHUNTER PERFORMANCE
+📊 VALUEHUNTER PERFORMANCE
 
-    All results are tracked automatically
-    based on official match results.
+{performance()}
 
-    ━━━━━━━━━━━━━━
+📈 MONTHLY RESULTS
 
-    📅 TODAY
-
-    {performance()}
-
-    ━━━━━━━━━━━━━━
-
-    📈 MONTHLY RESULTS
-
-    {monthly_report()}
-
-    ━━━━━━━━━━━━━━
-
-    ⚡ Elite members receive today's signals
-    before the market reacts.
-
-    When odds drop, the value disappears.
-
-    Today's signals release at **18:00**.
-
-    Unlock access below to receive the signals.
-    """,
+{monthly_report()}
+""",
             reply_markup=keyboard
         )
-        
+
+# ================= SUPPORT =================
+
     elif c.data == "support":
 
         keyboard = InlineKeyboardMarkup()
 
         keyboard.add(
             InlineKeyboardButton(
-                "⬅️ Back",
+                "⬅️ Back to plans",
                 callback_data="back_menu"
             )
         )
 
         bot.send_message(
             c.message.chat.id,
-            """
-    💬 VALUEHUNTER SUPPORT
+"""
+💬 VALUEHUNTER SUPPORT
 
-    Need help with access or payments?
+Contact:
 
-    Contact our support team:
-
-    🔹@MrMasterlegacy1
-
-    We will assist you quickly.
-
-    ⚠️ VIP signals are released daily
-    at 18:00.
-    """,
+🔹 @MrMasterlegacy1
+""",
             reply_markup=keyboard
+        )
+
+# ================= BACK =================
+
+    elif c.data == "back_menu":
+
+        bot.edit_message_text(
+            "👁‍🗨 VALUEHUNTER MENU",
+            c.message.chat.id,
+            c.message.message_id,
+            reply_markup=main_menu()
         )
         
 @bot.message_handler(commands=["sendvip"])
