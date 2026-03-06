@@ -68,6 +68,12 @@ last_time INTEGER
 )
 """)
 
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS expiry_notified(
+user_id INTEGER PRIMARY KEY
+)
+""")
+
 db.commit()
 
 # ================= VIP FUNCTIONS =================
@@ -805,7 +811,28 @@ def grade_results():
             (outcome,bet_id)
         )
         db.commit()
-        
+        if outcome == "WIN":
+
+            message = f"""
+        🔥 WIN CONFIRMED
+
+        ⚽ {match}
+        🎯 {pick}
+        📊 Odds {odds}
+
+        VIP members collected another win today.
+
+        🔐 Support: @MrMasterlegacy1
+        """
+
+            users = get_vip_users()
+
+            for uid, plan in users:
+
+                try:
+                    bot.send_message(uid, message)
+             except:
+                 pass
 # ---------- VALUE ENGINE ----------
 
 def get_value_bets():
@@ -1299,6 +1326,7 @@ def send_signals():
     vip_sent_today = False
 
     while True:
+        expiry_reminders()
         grade_results()
         now = datetime.now(tz)
 
@@ -1372,6 +1400,106 @@ def send_secure_message(user_id, text):
         )
     except:
         pass
+        
+def expiry_reminders():
+
+    now = int(time.time())
+
+    rows = cursor.execute(
+        "SELECT user_id,plan,expire FROM vip_users WHERE expire > ?",
+        (now,)
+    ).fetchall()
+
+    for user_id, plan, expire in rows:
+
+        remaining = expire - now
+
+        # 1 ώρα πριν λήξει
+        if remaining <= 3600:
+
+            if cursor.execute(
+                "SELECT user_id FROM expiry_notified WHERE user_id=?",
+                (user_id,)
+            ).fetchone():
+                continue
+
+            keyboard = InlineKeyboardMarkup()
+
+            keyboard.add(
+                InlineKeyboardButton(
+                    "🔓 Renew VIP Access",
+                    callback_data="elite"
+                )
+            )
+
+            # ---------- DAY PASS ----------
+            if plan == "DAY":
+
+                text = """
+⚠️ YOUR DAY PASS IS EXPIRING SOON
+
+Your 24 hour ValueHunter access** will expire in less than 1 hour.
+
+We hope you enjoyed experiencing the **ValueHunter Elite system** today.
+
+Every day our model scans hundreds of matches to uncover **hidden bookmaker value opportunities**.
+
+🔥 Today's members are already preparing the next signals.
+
+If your access expires, you may miss the next opportunities.
+
+━━━━━━━━━━━━━━
+
+🥇Thank you for trying ValueHunter.
+
+You can continue receiving signals by activating a membership below.
+"""
+
+            # ---------- BASIC / PRO ----------
+            else:
+
+                text = """
+⚠️ YOUR VIP ACCESS IS ABOUT TO EXPIRE
+
+Your ValueHunter Elite membership will expire in less than 1 hour.
+
+Every day our analytics engine scans hundreds of matches to identify **high value betting opportunities** before the market moves.
+
+🔥 The next signals will be released again at **18:00**.
+
+If your access expires now, you may miss the upcoming value opportunities that our members are preparing for.
+
+━━━━━━━━━━━━━━
+
+Thank you for being part of the **ValueHunter Elite network**.
+
+Renew your access below to continue receiving signals.
+"""
+
+            bot.send_message(
+                user_id,
+                text,
+                reply_markup=keyboard
+            )
+
+            cursor.execute(
+                "INSERT INTO expiry_notified VALUES (?)",
+                (user_id,)
+            )
+
+            db.commit()
+
+def keep_alive():
+
+    url = "https://valuehunter-bot-production.up.railway.app"
+
+    while True:
+        try:
+            requests.get(url, timeout=10)
+        except:
+            pass
+
+        time.sleep(600)
 # ================= TELEGRAM =================
 
 @bot.message_handler(commands=["start"])
@@ -1718,6 +1846,7 @@ threading.Thread(
     target=lambda: app.run(host="0.0.0.0", port=int(os.environ.get("PORT",8080))),
     daemon=True
 ).start()
+threading.Thread(target=keep_alive, daemon=True).start()
 
 # ================= RUN =================
 
