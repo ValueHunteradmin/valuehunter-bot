@@ -10,6 +10,9 @@ from flask import Flask, request
 import numpy as np
 import math
 import os
+import hmac
+import hashlib
+import json
 # ================= CONFIG =================
 
 TOKEN = "8767848071:AAHjxT7945VO-X7iCI3kG-0fIqC_giqX7Z8"
@@ -18,6 +21,7 @@ ADMIN_ID = 8328070177
 FOOTBALL_API_KEY = "2f8c79b66ceed85aaf20322308f11e5a"
 ODDS_API_KEY = "e55ba3ebd10f1d12494c0c10f1bfdb32"
 NOWPAY_API_KEY = "ZB43Y23-F3E4XKG-K83X2GC-MPAAHZ5"
+IPN_SECRET = "5B8MWD7S1sz5J+F100Hr7PyHI2D3jCjR"
 
 START_BANKROLL = 2000
 stake = 50
@@ -71,6 +75,12 @@ last_time INTEGER
 cursor.execute("""
 CREATE TABLE IF NOT EXISTS expiry_notified(
 user_id INTEGER PRIMARY KEY
+)
+""")
+
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS processed_payments(
+payment_id TEXT PRIMARY KEY
 )
 """)
 
@@ -178,11 +188,35 @@ def create_payment(amount,user_id):
 @app.route("/payment-webhook",methods=["POST"])
 def webhook():
 
-    data = request.json
+    received_sig = request.headers.get("x-nowpayments-sig")
 
+    payload = request.data
+
+    generated_sig = hmac.new(
+        IPN_SECRET.encode(),
+        payload,
+        hashlib.sha512
+    ).hexdigest()
+
+    if received_sig != generated_sig:
+        return "invalid signature"
+
+    data = json.loads(payload)
+    
     user_id = int(data["order_id"])
     amount = float(data["price_amount"])
     status = data["payment_status"]
+    
+    payment_id = data["payment_id"]
+    
+    # αποφυγή διπλής ενεργοποίησης VIP
+    exists = cursor.execute(
+        "SELECT payment_id FROM processed_payments WHERE payment_id=?",
+        (payment_id,)
+    ).fetchone()
+
+    if exists:
+        return "already processed"
 
     if status != "finished":
         return "ignored"
@@ -226,6 +260,13 @@ Welcome to VALUEHUNTER ELITE.
 🕕 18:00 VIP signals
 """
     )
+    
+    cursor.execute(
+        "INSERT INTO processed_payments VALUES (?)",
+        (payment_id,)
+    )
+
+    db.commit()
      
     return "ok"
     
@@ -408,13 +449,14 @@ def team_strength(home_attack,home_defense,away_attack,away_defense):
 
 def calculate_xg(home_strength,away_strength,league_id):
 
-    modifier=league_strength.get(league_id,1)
+    modifier = league_strength.get(league_id,1)
 
-    home_xg=home_strength*1.15*modifier
-    away_xg=away_strength*0.95*modifier
+    HOME_ADV = 0.30
+
+    home_xg = (home_strength * modifier) + HOME_ADV
+    away_xg = (away_strength * modifier)
 
     return home_xg,away_xg
-
 
 # ---------- POISSON ----------
 
@@ -1074,7 +1116,7 @@ def get_value_bets():
             
             market_prob = 1 / odds_value
 
-            if prob - market_prob < 0.04:
+            if prob - market_prob < 0.02:
                 continue
 
             if not liquidity_filter(
@@ -1254,7 +1296,7 @@ f"""⭐ SUPER SAFE BET
 
 {super_safe['early']}
 
-🎰 Bet: 50€"""
+💸 Bet: 50€"""
         )
 
     for bet in high_value[:2]:
@@ -1270,7 +1312,7 @@ f"""🔥 HIGH VALUE
 
 {bet['early']}
 
-🎰 Bet: 50€"""
+💸 Bet: 50€"""
         )
 
     league_odds_cache.clear()
@@ -1616,7 +1658,7 @@ def send_signals():
             )
 
             text = """
-            🔥 TODAY'S VIP SIGNALS ARE READY
+            🚀 TODAY'S VIP SIGNALS ARE READY
 
             The ValueHunter model has finalized today's analysis.
 
@@ -1821,7 +1863,7 @@ def start(m):
     bot.send_message(
         m.chat.id,
         """
-👁‍🗨 WELCOME TO VALUEHUNTER
+🔓 WELCOME TO VALUEHUNTER
 
 You have just entered a **private betting intelligence network**.
 
@@ -1851,7 +1893,7 @@ Membership capacity is limited and entry is **periodically closed** in order to 
 🔓 If you received access today,  
 you are currently inside a **temporary entry window**.
 
-🔥 Today's signals will be released at 18:00.
+🔔 Today's signals will be released at 18:00.
 ⬇️ Use the menu below to explore the platform.
 
 """,
@@ -1912,7 +1954,7 @@ high probability value opportunities.
 
 ⚠️ Access is limited to members.
 Signals are released daily at 18:00.
-🔥 Members are already betting today's signals.
+🔹 Members are already betting today's signals.
 """,
             reply_markup=m
         )
@@ -1921,130 +1963,145 @@ Signals are released daily at 18:00.
 
         link = create_payment(50,c.message.chat.id)
 
+        keyboard = InlineKeyboardMarkup()
+        keyboard.add(
+            InlineKeyboardButton(
+                "💳 Pay with Card / Crypto",
+                url=link
+            )
+        )
+
         bot.send_message(
             c.message.chat.id,
-    f"""
-    🥉 BASIC ACCESS
+f"""
+🥉 BASIC ACCESS
 
-    You are about to unlock **VALUEHUNTER BASIC membership**.
+You are about to unlock VALUEHUNTER BASIC membership.
 
-    This plan gives you access to:
+This plan gives you access to:
 
-    📊 1 Premium Value Bet per day  
-    📈 Selected from the highest model edge  
-    ⚙️ Generated using advanced football analytics  
-    🎯 Focused on long-term profitable betting  
+📊 1 Premium Value Bet per day  
+📈 Selected from the highest model edge  
+⚙️ Generated using advanced football analytics  
+🎯 Focused on long-term profitable betting  
 
-    ━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━
 
-    Signals are released daily at:
+Signals are released daily at:
 
-    🕔 17:00 — Model analysis  
-    🕕 18:00 — Official signal release
+🕔 17:00 — Model analysis  
+🕕 18:00 — Official signal release
 
-    ━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━
 
-    ⚠️ IMPORTANT
+⚠️ IMPORTANT
 
-    Membership slots are **limited** to maintain
-    signal efficiency and market advantage.
+Membership slots are **limited** to maintain
+signal efficiency and market advantage.
 
-    Members are already preparing today's bets.
-    
-    Secure your access below:
+Members are already preparing today's bets.
 
-    💳 Activate BASIC membership:
-
-    {link}
-    """
+Secure your access below:
+""",
+        reply_markup=keyboard
     )
 
     elif c.data == "buy_pro":
 
         link = create_payment(100,c.message.chat.id)
 
+        keyboard = InlineKeyboardMarkup()
+        keyboard.add(
+            InlineKeyboardButton(
+                "💳 Pay with Card / Crypto",
+                url=link
+            )
+        )
+
         bot.send_message(
             c.message.chat.id,
-    f"""
-    🥇 VALUEHUNTER PRO ACCESS
+f"""
+🥇 VALUEHUNTER PRO ACCESS
 
-    You are about to activate **PRO membership**.
+You are about to activate PRO membership.
 
-    This is the **full access tier** of the ValueHunter network.
+This is the **full access tier** of the ValueHunter network.
 
-    ━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━
 
-    With PRO you receive:
+With PRO you receive:
 
-    📊 3 Premium Value Bets every day  
-    📈 Highest model edge opportunities  
-    📡 Sharp odds movement detection  
-    ⚙️ Advanced football analytics  
+📊 3 Premium Value Bets every day  
+📈 Highest model edge opportunities  
+📡 Sharp odds movement detection  
+⚙️ Advanced football analytics  
 
-    Signals are selected from **hundreds of matches analyzed daily**.
+Signals are selected from hundreds of matches analyzed daily.
 
-    ━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━
 
-    📅 SIGNAL SCHEDULE
+📅 SIGNAL SCHEDULE
 
-    🕔 17:00 — Model analysis  
-    🕕 18:00 — VIP signals released  
+🕔 17:00 — Model analysis  
+🕕 18:00 — VIP signals released  
 
-    ━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━
 
-    ⚠️ PRO membership capacity is limited
-    to maintain signal efficiency.
-    
-    Most members choose PRO for full access.
-    
-    Activate your access below:
+⚠️ PRO membership capacity is limited
+to maintain signal efficiency.
 
-    💳 Secure your PRO access:
+Most members choose PRO for full access.
 
-    {link}
-    """
+Activate your access below:
+""",
+        reply_markup=keyboard
     )
     
     elif c.data == "buy_day":
 
         link = create_payment(25,c.message.chat.id)
 
+        keyboard = InlineKeyboardMarkup()
+        keyboard.add(
+            InlineKeyboardButton(
+                "💳 Pay with Card / Crypto",
+                url=link
+            )
+        )
+
         bot.send_message(
             c.message.chat.id,
-    f"""
-    ⚡ VALUEHUNTER DAY PASS
+f"""
+⚡ VALUEHUNTER DAY PASS
 
-    You are about to activate **24 hour PRO access**.
+You are about to activate 24 hour PRO access.
 
-    This pass allows you to experience the **full ValueHunter system** for one day.
+This pass allows you to experience the **full ValueHunter system** for one day.
 
-    ━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━
 
-    With the DAY PASS you receive:
+With the DAY PASS you receive:
 
-    📊 Up to 3 Premium Value Bets today  
-    📈 Highest model edge opportunities  
-    📡 Sharp odds movement detection  
-    ⚙️ Advanced football analytics  
+📊 Up to 3 Premium Value Bets today  
+📈 Highest model edge opportunities  
+📡 Sharp odds movement detection  
+⚙️ Advanced football analytics  
 
-    ━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━
 
-    📅 SIGNAL SCHEDULE
+📅 SIGNAL SCHEDULE
 
-    🕔 17:00 — Model analysis  
-    🕕 18:00 — VIP signals released  
+🕔 17:00 — Model analysis  
+🕕 18:00 — VIP signals released  
 
-    ━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━
 
-    ⚠️ DAY PASS availability is limited
-    during active signal days.
+⚠️ DAY PASS availability is limited
+during active signal days.
 
-    Activate your 24h access below:
-
-    💳 Get DAY PASS access:
-
-    {link}
-    """
+Activate your 24h access below:
+""",
+        reply_markup=keyboard
     )
     
     elif c.data == "sample":
@@ -2151,6 +2208,219 @@ Signals are released daily at 18:00.
     at 18:00.
     """
         )
+        
+@bot.message_handler(commands=["sendvip"])
+def sendvip(m):
+
+    if m.chat.id != ADMIN_ID:
+        return
+
+    bets = get_value_bets()
+
+    users = get_vip_users()
+
+    for uid, plan in users:
+
+        if plan == "BASIC":
+            picks = bets[:1]
+        else:
+            picks = bets[:3]
+
+        text = "🔥 VIP SIGNALS\n\n" + "\n\n".join(picks)
+
+        bot.send_message(uid,text)
+
+    bot.send_message(m.chat.id,"VIP signals sent.")
+    
+    @bot.message_handler(commands=["stats"])
+def stats(m):
+
+    if m.chat.id != ADMIN_ID:
+        return
+
+    bot.send_message(
+        m.chat.id,
+        performance() + "\n\n" + monthly_report()
+    )
+    
+@bot.message_handler(commands=["bankroll"])
+def bankroll(m):
+
+    if m.chat.id != ADMIN_ID:
+        return
+
+    bot.send_message(
+        m.chat.id,
+        bankroll_status()
+    )
+    
+@bot.message_handler(commands=["users"])
+def users(m):
+
+    if m.chat.id != ADMIN_ID:
+        return
+
+    all_users = get_all_users()
+    vip = get_vip_users()
+
+    bot.send_message(
+        m.chat.id,
+        f"""
+Total users: {len(all_users)}
+VIP users: {len(vip)}
+"""
+    )
+    
+@bot.message_handler(commands=["broadcast"])
+def broadcast(m):
+
+    if m.chat.id != ADMIN_ID:
+        return
+
+    text = """
+🔥 MARKET ACTIVITY DETECTED
+
+Our ValueHunter analytics engine has detected **unusual betting activity** in today's football markets.
+
+Several **high probability opportunities** are currently being analyzed by the model.
+
+━━━━━━━━━━━━━━
+
+⚡ Elite members will receive the official signals before the market reacts.
+
+Once odds begin to move, value disappears quickly.
+
+Today's signals will be released at **18:00**.
+
+━━━━━━━━━━━━━━
+
+⚠️ Access to the ValueHunter network may close once signals are released.
+
+Secure your access before the market reacts.
+"""
+
+    users = get_all_users()
+
+    for uid in users:
+
+        try:
+            bot.send_message(uid,text)
+        except:
+            pass
+
+    bot.send_message(m.chat.id,"Broadcast sent.")
+    
+@bot.message_handler(commands=["viplist"])
+def viplist(m):
+
+    if m.chat.id != ADMIN_ID:
+        return
+
+    users = get_vip_users()
+
+    text = "VIP USERS\n\n"
+
+    for uid, plan in users:
+        text += f"{uid} - {plan}\n"
+
+    bot.send_message(m.chat.id,text)
+    
+@bot.message_handler(commands=["addvip"])
+def addvip_cmd(m):
+
+    if m.chat.id != ADMIN_ID:
+        return
+
+    try:
+        _, user_id, days = m.text.split()
+
+        add_vip(int(user_id),"PRO",int(days))
+
+        bot.send_message(m.chat.id,"VIP added.")
+    except:
+        bot.send_message(m.chat.id,"Usage: /addvip user_id days")
+        
+@bot.message_handler(commands=["removevip"])
+def removevip(m):
+
+    if m.chat.id != ADMIN_ID:
+        return
+
+    try:
+        _, user_id = m.text.split()
+
+        cursor.execute(
+            "DELETE FROM vip_users WHERE user_id=?",
+            (int(user_id),)
+        )
+
+        db.commit()
+
+        bot.send_message(m.chat.id,"VIP removed.")
+    except:
+        bot.send_message(m.chat.id,"Usage: /removevip user_id")
+        
+@bot.message_handler(commands=["bets"])
+def bets(m):
+
+    if m.chat.id != ADMIN_ID:
+        return
+
+    rows = cursor.execute(
+        "SELECT match,pick,odds,result FROM bets_history ORDER BY id DESC LIMIT 10"
+    ).fetchall()
+
+    text = "LAST BETS\n\n"
+
+    for match,pick,odds,result in rows:
+
+        text += f"{match}\n{pick}\nOdds {odds} - {result}\n\n"
+
+    bot.send_message(m.chat.id,text)
+    
+@bot.message_handler(commands=["reload_engine"])
+def reload_engine(m):
+
+    if m.chat.id != ADMIN_ID:
+        return
+
+    team_stats_cache.clear()
+    injury_cache.clear()
+    league_odds_cache.clear()
+
+    bot.send_message(m.chat.id,"Engine cache cleared.")
+    
+@bot.message_handler(commands=["force_alert"])
+def force_alert(m):
+
+    if m.chat.id != ADMIN_ID:
+        return
+
+    alert = market_alert()
+
+    users = get_all_users()
+
+    for uid in users:
+
+        try:
+            bot.send_message(uid,alert)
+        except:
+            pass
+
+    bot.send_message(m.chat.id,"Alert sent.")
+    
+@bot.message_handler(commands=["test_payment"])
+def test_payment(m):
+
+    if m.chat.id != ADMIN_ID:
+        return
+
+    link = create_payment(1,m.chat.id)
+
+    bot.send_message(
+        m.chat.id,
+        f"Test payment link:\n{link}"
+    )
 
 # ================= THREADS =================
 
