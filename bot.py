@@ -107,6 +107,11 @@ def is_vip(user_id):
         (user_id,)
     ).fetchone()
 
+    if not r:
+        return False
+
+    return r[0] > now
+
 def get_all_users():
 
     users = set()
@@ -282,6 +287,11 @@ clv_history={}
 team_stats_cache={}
 injury_cache={}
 league_odds_cache={}
+league_odds_cache_time={}
+value_cache = []
+value_cache_time = 0
+fixtures_cache = []
+fixtures_cache_time = 0
 
 # ---------- IMPLIED PROBABILITY ----------
 
@@ -293,35 +303,43 @@ def implied_probability(odds):
 
 def scan_matches():
 
-    fixtures=[]
+    global fixtures_cache, fixtures_cache_time
+
+    if time.time() - fixtures_cache_time < 1800:
+        return fixtures_cache
+
+    fixtures = []
 
     for page in range(1,6):
 
-        url=f"https://v3.football.api-sports.io/fixtures?next=100&page={page}"
-        headers={"x-apisports-key":FOOTBALL_API_KEY}
+        url = f"https://v3.football.api-sports.io/fixtures?next=100&page={page}"
+        headers = {"x-apisports-key": FOOTBALL_API_KEY}
 
         try:
-            r=requests.get(url,headers=headers).json()
+            r = requests.get(url, headers=headers).json()
             time.sleep(0.1)
         except:
             continue
 
         for m in r.get("response", []):
 
-            match_time=m["fixture"]["timestamp"]
-            now=int(time.time())
+            match_time = m["fixture"]["timestamp"]
+            now = int(time.time())
 
-            if not (86400 <= match_time-now <=259200):
+            if not (7200 <= match_time-now <= 259200):
                 continue
 
             fixtures.append({
-                "fixture_id":m["fixture"]["id"],
-                "home":m["teams"]["home"]["name"],
-                "away":m["teams"]["away"]["name"],
-                "home_id":m["teams"]["home"]["id"],
-                "away_id":m["teams"]["away"]["id"],
-                "league_id":m["league"]["id"]
+                "fixture_id": m["fixture"]["id"],
+                "home": m["teams"]["home"]["name"],
+                "away": m["teams"]["away"]["name"],
+                "home_id": m["teams"]["home"]["id"],
+                "away_id": m["teams"]["away"]["id"],
+                "league_id": m["league"]["id"]
             })
+
+    fixtures_cache = fixtures
+    fixtures_cache_time = time.time()
 
     return fixtures
 
@@ -420,7 +438,7 @@ def poisson_matrix(home_xg,away_xg):
 
 # ---------- MONTE CARLO ----------
 
-def monte_carlo_simulation(home_xg,away_xg,simulations=3000):
+def monte_carlo_simulation(home_xg,away_xg,simulations=1000):
 
     home_wins=0
 
@@ -549,7 +567,8 @@ def asian_optimizer(matrix):
 def get_league_odds(league_id):
 
     if league_id in league_odds_cache:
-        return league_odds_cache[league_id]
+        if time.time() - league_odds_cache_time[league_id] < 600:
+            return league_odds_cache[league_id]
 
     url = f"https://v3.football.api-sports.io/odds?league={league_id}&season=2024"
     headers = {"x-apisports-key": FOOTBALL_API_KEY}
@@ -591,6 +610,7 @@ def get_league_odds(league_id):
         odds_data[fixture_id] = best_odds
 
     league_odds_cache[league_id] = odds_data
+    league_odds_cache_time[league_id] = time.time()
 
     return odds_data
 
@@ -672,13 +692,14 @@ def calculate_ev(prob,odds):
 
 # ---------- MARKET CONSENSUS FILTER ----------
 
-def market_consensus_filter(prob,odds):
+def market_consensus_filter(prob, odds):
 
-    market_prob = 1/odds
+    market_prob = 1 / odds
 
-    difference = abs(prob - market_prob)
+    edge = prob - market_prob
 
-    if difference > 0.20:
+    # μικρό edge → άχρηστο bet
+    if edge < 0.02:
         return False
 
     return True
@@ -773,10 +794,10 @@ def correlation_filter(bets):
 def grade_results():
 
     rows = cursor.execute(
-        "SELECT id,match,pick,result FROM bets_history WHERE result='PENDING'"
+        "SELECT id,match,pick,odds,result FROM bets_history WHERE result='PENDING'"
     ).fetchall()
 
-    for bet_id,match,pick,result in rows:
+    for bet_id,match,pick,odds,result in rows:
 
         home,away = match.split(" vs ")
 
@@ -921,6 +942,12 @@ def grade_results():
 
 def get_value_bets():
 
+    global value_cache, value_cache_time
+
+    # αν έχουν περάσει λιγότερα από 15 λεπτά
+    if time.time() - value_cache_time < 900:
+        return value_cache
+
     fixtures = scan_matches()
 
     candidates = []
@@ -954,6 +981,9 @@ def get_value_bets():
             as_,
             f["league_id"]
         )
+        
+        xg_diff = abs(home_xg - away_xg)
+        total_xg = home_xg + away_xg
 
         if not model_sanity_filter(home_xg, away_xg):
             continue
@@ -991,18 +1021,19 @@ def get_value_bets():
         if not odds:
             continue
 
-        asian_odds = odds.get("Match Winner_Home")
+        home_odds = odds.get("Match Winner_Home")
         over_odds = odds.get("Goals Over/Under_Over 2.5")
         under_odds = odds.get("Goals Over/Under_Under 2.5")
         over15_odds = odds.get("Goals Over/Under_Over 1.5")
         over35_odds = odds.get("Goals Over/Under_Over 3.5")
+        under35_odds = odds.get("Goals Over/Under_Under 3.5")
         btts_odds = odds.get("Both Teams Score_Yes")
 
         markets = []
 
-        if asian_odds:
+        if home_odds:
             markets.append(
-                ("Asian Handicap", asian_prob, asian_odds, line)
+                ("Home Win", home_prob, home_odds, None)
             )
 
         if over_odds:
@@ -1010,7 +1041,7 @@ def get_value_bets():
                 ("Over 2.5", over25_prob, over_odds, None)
             )
 
-        if under_odds:
+        if under_odds and total_xg < 2.7:
             markets.append(
                 ("Under 2.5", under25_prob, under_odds, None)
             )
@@ -1020,9 +1051,14 @@ def get_value_bets():
                 ("Over 1.5", over15_prob, over15_odds, None)
             )
 
-        if over35_odds:
+        if over35_odds and total_xg > 2.8:
             markets.append(
                 ("Over 3.5", over35_prob, over35_odds, None)
+            )
+            
+        if under35_odds and total_xg < 3.2:
+            markets.append(
+                ("Under 3.5", 1 - over35_prob, under35_odds, None)
             )
 
         if btts_odds:
@@ -1146,9 +1182,9 @@ def get_value_bets():
 
             pick = market
 
-            if market == "Asian Handicap":
-                pick = f"Asian Handicap {f['home']} {line}"
-
+            if market == "Home Win":
+                pick = f"{f['home']} to Win"
+                
             bet_key = f"{f['fixture_id']}_{pick}"
 
             if cursor.execute(
@@ -1240,7 +1276,9 @@ f"""🔥 HIGH VALUE
     league_odds_cache.clear()
     team_stats_cache.clear()
     injury_cache.clear()
-
+    value_cache = signals
+    value_cache_time = time.time()
+    
     return signals
     
 # ================= DAILY SAMPLE =================
@@ -1275,9 +1313,10 @@ Next free bet available in {hours} hours.
     bets = get_value_bets()
 
     if not bets:
-        return "No value today"
+        return "⚠️ No value bets detected today."
 
     cursor.execute(
+
         "INSERT OR REPLACE INTO free_sample VALUES (?,?)",
         (user_id, now)
     )
@@ -1408,39 +1447,37 @@ def performance():
     day = now - 86400
     week = now - (86400 * 7)
 
-    # daily
     daily = cursor.execute(
         "SELECT odds,result FROM bets_history WHERE timestamp>?",
         (day,)
     ).fetchall()
 
-    # weekly
     weekly = cursor.execute(
         "SELECT odds,result FROM bets_history WHERE timestamp>?",
         (week,)
     ).fetchall()
 
-def calc_profit(data):
+    def calc_profit(data):
 
-    wins = 0
-    losses = 0
-    profit = 0
-    stake = 50
+        wins = 0
+        losses = 0
+        profit = 0
+        stake = 50
 
-    for odds, result in data:
+        for odds, result in data:
 
-        if result == "WIN":
-            wins += 1
-            profit += (odds * stake) - stake
+            if result == "WIN":
+                wins += 1
+                profit += (odds * stake) - stake
 
-        elif result == "LOSE":
-            losses += 1
-            profit -= stake
+            elif result == "LOSE":
+                losses += 1
+                profit -= stake
 
-        return wins,losses,profit
+        return wins, losses, profit
 
-    dw,dl,dp = calc_profit(daily)
-    ww,wl,wp = calc_profit(weekly)
+    dw, dl, dp = calc_profit(daily)
+    ww, wl, wp = calc_profit(weekly)
 
     return f"""
 📊 DAILY PERFORMANCE
@@ -1508,10 +1545,10 @@ def bankroll_status():
     for odds,result in rows:
 
         if result == "WIN":
-            bankroll += (odds * BET_STAKE) - BET_STAKE
+            bankroll += (odds * stake) - stake
 
         elif result == "LOSE":
-            bankroll -= BET_STAKE
+            bankroll -= stake
 
     profit = bankroll - START_BANKROLL
 
@@ -1534,10 +1571,17 @@ def send_signals():
 
     admin_sent_today = False
     vip_sent_today = False
+    last_cleanup_day = None
 
     while True:
+        today = datetime.now(tz).date()
+
+        if last_cleanup_day != today:
+           clean_sent_bets()
+           last_cleanup_day = today
         expiry_reminders()
         grade_results()
+        
         now = datetime.now(tz)
 
         hour = now.hour
@@ -1561,7 +1605,7 @@ def send_signals():
 
         if hour == 17 and minute == 45:
 
-            users = get_vip_users()
+            users = get_all_users()
 
             keyboard = InlineKeyboardMarkup()
             keyboard.add(
@@ -1587,7 +1631,10 @@ def send_signals():
             Secure access before the release.
             """
 
-            for uid, plan in users:
+            for uid in users:
+
+                if is_vip(uid):
+                    continue
 
                 try:
                     bot.send_message(
@@ -1754,6 +1801,18 @@ def keep_alive():
             pass
 
         time.sleep(600)
+        
+def clean_sent_bets():
+
+    cursor.execute("""
+    DELETE FROM sent_bets
+    WHERE rowid NOT IN (
+        SELECT rowid FROM sent_bets ORDER BY rowid DESC LIMIT 5000
+    )
+    """)
+
+    db.commit()
+    
 # ================= TELEGRAM =================
 
 @bot.message_handler(commands=["start"])
