@@ -811,8 +811,9 @@ def grade_results():
             (outcome,bet_id)
         )
         db.commit()
-        if outcome == "WIN":
-
+        
+        if outcome == "WIN" and result == "PENDING":
+            
             message = f"""
         🔥 WIN CONFIRMED
 
@@ -821,6 +822,8 @@ def grade_results():
         📊 Odds {odds}
 
         VIP members collected another win today.
+        
+        📡 Next signals released at 18:00...
 
         🔐 Support: @MrMasterlegacy1
         """
@@ -831,8 +834,10 @@ def grade_results():
 
                 try:
                     bot.send_message(uid, message)
-             except:
-                 pass
+                    time.sleep(0.05)
+                except:
+                    pass
+                    
 # ---------- VALUE ENGINE ----------
 
 def get_value_bets():
