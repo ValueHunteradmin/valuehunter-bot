@@ -516,46 +516,48 @@ def get_league_odds(league_id):
     if league_id in league_odds_cache:
         return league_odds_cache[league_id]
 
-    url=f"https://v3.football.api-sports.io/odds?league={league_id}&season=2024"
-    headers={"x-apisports-key":FOOTBALL_API_KEY}
+    url = f"https://v3.football.api-sports.io/odds?league={league_id}&season=2024"
+    headers = {"x-apisports-key": FOOTBALL_API_KEY}
 
     try:
-        r=requests.get(url,headers=headers).json()
+        r = requests.get(url, headers=headers).json()
     except:
         return None
 
-    odds_data={}
+    odds_data = {}
 
     for game in r.get("response", []):
 
-        fixture_id=game["fixture"]["id"]
+        fixture_id = game["fixture"]["id"]
+        bookmakers = game["bookmakers"]
 
-        bookmakers=game["bookmakers"]
-
-        best_odds={}
+        best_odds = {}
 
         for book in bookmakers:
 
             for bet in book["bets"]:
 
-                market=bet["name"]
+                market = bet["name"]
 
                 for v in bet["values"]:
 
-                    key=f"{market}_{v['value']}"
-                    odd=float(v["odd"])
+                    key = f"{market}_{v['value']}"
+                    odd = float(v["odd"])
 
                     if key not in best_odds:
-                        best_odds[key]=odd
+                        best_odds[key] = odd
                     else:
-                        best_odds[key]=max(best_odds[key],odd)
+                        # αποφυγή ακραίων odds
+                        if abs(best_odds[key] - odd) > 0.50:
+                            continue
 
-        odds_data[fixture_id]=best_odds
+                        best_odds[key] = max(best_odds[key], odd)
 
-    league_odds_cache[league_id]=odds_data
+        odds_data[fixture_id] = best_odds
+
+    league_odds_cache[league_id] = odds_data
 
     return odds_data
-
 
 # ---------- ODDS MOVEMENT ----------
 
@@ -956,6 +958,11 @@ def get_value_bets():
             implied = implied_probability(odds_value)
 
             edge = prob - implied
+            
+            market_prob = 1 / odds_value
+
+            if prob - market_prob < 0.04:
+                continue
 
             if not liquidity_filter(
                 f["league_id"],
@@ -989,7 +996,11 @@ def get_value_bets():
                 f["fixture_id"],
                 odds_value
             )
-
+            
+            # ---------- ODDS MOVEMENT FILTER ----------
+            if move < -0.15:
+                continue
+                
             steam = detect_steam_move(
                 f["fixture_id"],
                 odds_value
