@@ -107,6 +107,26 @@ def is_vip(user_id):
         (user_id,)
     ).fetchone()
 
+def get_all_users():
+
+    users = set()
+
+    vip = cursor.execute(
+        "SELECT user_id FROM vip_users"
+    ).fetchall()
+
+    sample = cursor.execute(
+        "SELECT user_id FROM free_sample"
+    ).fetchall()
+
+    for u in vip:
+        users.add(u[0])
+
+    for u in sample:
+        users.add(u[0])
+
+    return list(users)
+    
     if not r:
         return False
 
@@ -230,14 +250,29 @@ def get_matches():
 
 # ================= VALUE ENGINE =================
 
-GOOD_LEAGUES = {39,78,140,135,61,94,88,203}
+GOOD_LEAGUES = {
+39,   # Premier League
+140,  # La Liga
+135,  # Serie A
+78,   # Bundesliga
+61,   # Ligue 1
+88,   # Eredivisie
+94,   # Primeira Liga
+203,  # Super Lig
+2,    # Champions League
+3,    # Europa League
+848   # Conference League
+}
 
-league_strength={
+league_strength = {
 39:1.05,
 78:1.08,
 135:0.95,
 140:1.00,
-61:0.97
+61:0.97,
+88:1.02,
+94:0.98,
+203:0.96
 }
 
 odds_history={}
@@ -276,7 +311,7 @@ def scan_matches():
             match_time=m["fixture"]["timestamp"]
             now=int(time.time())
 
-            if not (86400 <= match_time-now <=129600):
+            if not (86400 <= match_time-now <=259200):
                 continue
 
             fixtures.append({
@@ -415,11 +450,11 @@ def model_sanity_filter(home_xg, away_xg):
     total_xg = home_xg + away_xg
 
     # πολύ χαμηλό tempo παιχνίδι
-    if total_xg < 1.6:
+    if total_xg < 1.8:
         return False
 
     # πολύ υψηλό tempo (unstable poisson)
-    if total_xg > 4.5:
+    if total_xg > 4.2:
         return False
 
     # πολύ μονόπλευρο παιχνίδι
@@ -839,6 +874,48 @@ def grade_results():
                     time.sleep(0.05)
                 except:
                     pass
+                                
+            # ---------- SEND WIN TO FREE USERS ---------
+                                        
+            free_users = get_all_users()
+
+            free_text = f"""
+        🏆 VIP WIN
+
+        ⚽ {match}
+        🎯 {pick}
+
+        Elite members collected another win today.
+
+        ━━━━━━━━━━━━━━
+
+        Today's signals will be released again at **18:00**.
+
+        Access to the ValueHunter network may close once signals are released.
+        """
+
+            keyboard = InlineKeyboardMarkup()
+            keyboard.add(
+                InlineKeyboardButton(
+                    "🔐 Unlock VIP Access",
+                    callback_data="elite"
+                )
+            )
+
+            for uid in free_users:
+
+                if is_vip(uid):
+                    continue
+
+                try:
+                    bot.send_message(
+                        uid,
+                        free_text,
+                        reply_markup=keyboard
+                    )
+                   time.sleep(0.05)
+               except:
+                   pass
                     
 # ---------- VALUE ENGINE ----------
 
@@ -1020,6 +1097,11 @@ def get_value_bets():
                 prob,
                 odds_value
             )
+            
+            if timing_signal:
+                early_text = "\n⚡ Early value detected\nOdds may drop soon\n"
+            else:
+                early_text = ""
 
             steam_prediction = predict_steam(
                 prob,
@@ -1031,7 +1113,7 @@ def get_value_bets():
                 (edge * 200) +
                 (ev * 100)
             )
-
+                
             if pinnacle_signal:
                 confidence += 6
 
@@ -1043,9 +1125,21 @@ def get_value_bets():
 
             if timing_signal:
                 confidence += 8
+                
+            # EARLY VALUE SIGNAL
+            if timing_signal and prob > 0.63:
+                confidence += 5
 
             if clv > 0.10:
                 confidence += 5
+                
+            # ideal odds range bonus
+            if 1.70 <= odds_value <= 2.20:
+                confidence += 4
+
+            # strong probability bonus
+            if prob >= 0.62:
+                confidence += 3
 
             if ev <= 0.05:
                 continue
@@ -1091,6 +1185,7 @@ def get_value_bets():
                 "ev": ev,
                 "confidence": confidence,
                 "stake": stake
+                "early": early_text
             })
 
     ranked = rank_bets(candidates)
@@ -1120,6 +1215,9 @@ f"""⭐ SUPER SAFE BET
 📈 Probability {round(super_safe['prob']*100)}%
 💰 Value {round(super_safe['ev'],2)}
 💵 Stake {round(super_safe['stake']*100,1)}% bankroll
+
+{super_safe['early']}
+
 🎰 Bet: 50€"""
         )
 
@@ -1133,6 +1231,9 @@ f"""🔥 HIGH VALUE
 📈 Probability {round(bet['prob']*100)}%
 💰 Value {round(bet['ev'],2)}
 💵 Stake {round(bet['stake']*100,1)}% bankroll
+
+{bet['early']}
+
 🎰 Bet: 50€"""
         )
 
@@ -1207,6 +1308,98 @@ Odds dropped:
 Heavy betting activity detected.
 """
 
+def start_conversion_funnel(user_id):
+
+    def funnel():
+
+        # ---------- MESSAGE 1 (30 minutes) ----------
+        time.sleep(1800)
+
+        try:
+            bot.send_message(
+                user_id,
+"""
+📡 MODEL UPDATE
+
+The ValueHunter analytics engine has already started scanning today's football markets.
+
+Several **high probability value opportunities** have been detected.
+
+Elite members will receive the final signals before the market reacts.
+
+━━━━━━━━━━━━━━
+
+⚠️ Access is currently open but may close once signals are released.
+
+Use the menu to unlock access.
+"""
+            )
+        except:
+            pass
+
+
+        # ---------- MESSAGE 2 (2 hours) ----------
+        time.sleep(7200)
+
+        try:
+            bot.send_message(
+                user_id,
+"""
+⚡ MARKET MOVEMENT DETECTED
+
+The system has detected **unusual betting activity** on today's matches.
+
+Sharp money is entering the market.
+
+When this happens, odds usually drop quickly.
+
+━━━━━━━━━━━━━━
+
+Elite members will receive the signal **before the market moves**.
+
+Signals release today at **18:00**.
+"""
+            )
+        except:
+            pass
+
+
+        # ---------- MESSAGE 3 (before signals) ----------
+        time.sleep(3600)
+
+        keyboard = InlineKeyboardMarkup()
+        keyboard.add(
+            InlineKeyboardButton(
+                "🔐 Unlock Elite Access",
+                callback_data="elite"
+            )
+        )
+
+        try:
+            bot.send_message(
+                user_id,
+"""
+⏳ FINAL ENTRY WINDOW
+
+Today's ValueHunter signals will be released soon.
+
+Our model has already selected the **strongest value opportunities** from hundreds of matches.
+
+━━━━━━━━━━━━━━
+
+⚠️ Once signals are released, access may close to protect the betting edge.
+
+Elite members are already preparing today's bets.
+
+Secure your access before the release.
+""",
+                reply_markup=keyboard
+            )
+        except:
+            pass
+
+    threading.Thread(target=funnel).start()
+    
 # ================= PERFORMANCE =================
 
 def performance():
@@ -1362,6 +1555,48 @@ def send_signals():
                 )
 
             admin_sent_today = True
+            
+        # ---------- FOMO MESSAGE 17:45 ----------
+
+        if hour == 17 and minute == 45:
+
+            users = get_vip_users()
+
+            keyboard = InlineKeyboardMarkup()
+            keyboard.add(
+                InlineKeyboardButton(
+                    "🔐 Unlock VIP Signals",
+                    callback_data="elite"
+                )
+            )
+
+            text = """
+            🔥 TODAY'S VIP SIGNALS ARE READY
+
+            The ValueHunter model has finalized today's analysis.
+
+            Our system scanned hundreds of matches and identified the strongest value opportunities.
+
+            ━━━━━━━━━━━━━━
+
+            ⚠️ VIP signals will be released at **18:00**.
+
+            Members are already preparing today's bets.
+
+            Secure access before the release.
+            """
+
+                for uid, plan in users:
+
+                    try:
+                        bot.send_message(
+                            uid,
+                            text,
+                            reply_markup=keyboard
+                        )
+                        time.sleep(0.05)
+                    except:
+                        pass
 
         # ---------- VIP 18:00 ----------
 
@@ -1560,6 +1795,7 @@ you are currently inside a **temporary entry window**.
 """,
         reply_markup=main_menu()
     )
+    start_conversion_funnel(m.chat.id)
 
 @bot.callback_query_handler(func=lambda c: True)
 def callbacks(c):
