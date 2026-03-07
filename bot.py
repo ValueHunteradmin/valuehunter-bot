@@ -2201,27 +2201,27 @@ you are currently inside a **temporary entry window**.
 def callbacks(c):
 
     bot.answer_callback_query(c.id)
-    
-# ---------- VIP DASHBOARD ----------
-if c.data == "vip_dashboard":
 
-    send_vip_dashboard(
-        c.message.chat.id,
-        c.message.message_id
-    )
+    # ---------- VIP DASHBOARD ----------
+    if c.data == "vip_dashboard":
 
-# ---------- VIP MENU ----------
-elif c.data == "vip_menu":
+        send_vip_dashboard(
+            c.message.chat.id,
+            c.message.message_id
+        )
 
-    send_vip_menu(
-        c.message.chat.id,
-        c.message.message_id
-    )
+    # ---------- VIP MENU ----------
+    elif c.data == "vip_menu":
 
-# ---------- MODEL INSIGHTS ----------
-elif c.data == "model_insights":
+        send_vip_menu(
+            c.message.chat.id,
+            c.message.message_id
+        )
 
-    text = """
+    # ---------- MODEL INSIGHTS ----------
+    elif c.data == "model_insights":
+
+        text = """
 📡 MODEL INSIGHTS
 
 The ValueHunter analytics engine scans hundreds of football matches daily to detect bookmaker pricing inefficiencies.
@@ -2234,26 +2234,26 @@ The ValueHunter analytics engine scans hundreds of football matches daily to det
 Only the strongest value opportunities pass the model filters and reach Elite members.
 """
 
-    keyboard = InlineKeyboardMarkup()
+        keyboard = InlineKeyboardMarkup()
 
-    keyboard.add(
-        InlineKeyboardButton(
-            "🌐 Back to Dashboard",
-            callback_data="vip_dashboard"
+        keyboard.add(
+            InlineKeyboardButton(
+                "🌐 Back to Dashboard",
+                callback_data="vip_dashboard"
+            )
         )
-    )
 
-    bot.edit_message_text(
-        text,
-        c.message.chat.id,
-        c.message.message_id,
-        reply_markup=keyboard
-    )
+        bot.edit_message_text(
+            text,
+            c.message.chat.id,
+            c.message.message_id,
+            reply_markup=keyboard
+        )
 
-# ---------- BETTING STRATEGY ----------
-elif c.data == "betting_strategy":
+    # ---------- BETTING STRATEGY ----------
+    elif c.data == "betting_strategy":
 
-    text = """
+        text = """
 🧠 BETTING STRATEGY
 
 The ValueHunter system focuses on long-term profitable betting.
@@ -2266,24 +2266,25 @@ Recommended staking model:
 Consistent discipline allows members to replicate the same bankroll growth curve as the model.
 """
 
-    keyboard = InlineKeyboardMarkup()
-    keyboard.add(
-        InlineKeyboardButton(
-            "🌐 Back to Dashboard",
-            callback_data="vip_dashboard"
+        keyboard = InlineKeyboardMarkup()
+        keyboard.add(
+            InlineKeyboardButton(
+                "🌐 Back to Dashboard",
+                callback_data="vip_dashboard"
+            )
         )
-    )
 
-    bot.edit_message_text(
-        text,
-        c.message.chat.id,
-        c.message.message_id,
-        reply_markup=keyboard
-    )
-# ---------- RESULTS FEED ----------
-elif c.data == "vip_results":
+        bot.edit_message_text(
+            text,
+            c.message.chat.id,
+            c.message.message_id,
+            reply_markup=keyboard
+        )
 
-    text = """
+    # ---------- RESULTS FEED ----------
+    elif c.data == "vip_results":
+
+        text = """
 💸 VIP RESULTS FEED
 
 Recent signals from the ValueHunter network:
@@ -2296,45 +2297,45 @@ Recent signals from the ValueHunter network:
 The ValueHunter system focuses on identifying bookmaker pricing errors rather than predicting every match.
 """
 
-    keyboard = InlineKeyboardMarkup()
+        keyboard = InlineKeyboardMarkup()
 
-    keyboard.add(
-        InlineKeyboardButton(
-            "🌐 Back to Dashboard",
-            callback_data="vip_dashboard"
+        keyboard.add(
+            InlineKeyboardButton(
+                "🌐 Back to Dashboard",
+                callback_data="vip_dashboard"
+            )
         )
-    )
 
-    bot.edit_message_text(
-        text,
-        c.message.chat.id,
-        c.message.message_id,
-        reply_markup=keyboard
-    )
-    
-# ---------- VIP SIGNALS ----------
-elif c.data == "vip_signals":
+        bot.edit_message_text(
+            text,
+            c.message.chat.id,
+            c.message.message_id,
+            reply_markup=keyboard
+        )
 
-    now = datetime.now(pytz.timezone("Europe/Athens")).hour
+    # ---------- VIP SIGNALS ----------
+    elif c.data == "vip_signals":
 
-    if now < 18:
+        now = datetime.now(pytz.timezone("Europe/Athens")).hour
 
-        countdown = signal_countdown()
+        if now < 18:
 
-        import random
+            countdown = signal_countdown()
 
-        bars = [
-            "████░░░░░░",
-            "█████░░░░░",
-            "██████░░░░",
-            "███████░░░",
-            "████████░░",
-            "█████████░"
-        ]
+            import random
 
-        scan_bar = random.choice(bars)
+            bars = [
+                "████░░░░░░",
+                "█████░░░░░",
+                "██████░░░░",
+                "███████░░░",
+                "████████░░",
+                "█████████░"
+            ]
 
-        text = f"""
+            scan_bar = random.choice(bars)
+
+            text = f"""
 📊 𝑻𝑶𝑫𝑨𝒀'𝑺 𝑺𝑰𝑮𝑵𝑨𝑳𝑺
 
 The ValueHunter analytics engine is currently scanning today's football markets.
@@ -2360,9 +2361,9 @@ Scanning markets {scan_bar}
 Elite members will receive today's signals as soon as the analysis is completed.
 """
 
-    else:
+        else:
 
-        text = """
+            text = """
 📊 𝑻𝑶𝑫𝑨𝒀'𝑺 𝑺𝑰𝑮𝑵𝑨𝑳𝑺
 
 Today's ValueHunter signals have already been distributed to the Elite network.
@@ -2378,26 +2379,26 @@ Today's ValueHunter signals have already been distributed to the Elite network.
 Elite members are already positioned on today's value opportunities.
 """
 
-    keyboard = InlineKeyboardMarkup()
+        keyboard = InlineKeyboardMarkup()
 
-    keyboard.add(
-        InlineKeyboardButton(
-            "🌐 Back to VIP Menu",
-            callback_data="vip_menu"
+        keyboard.add(
+            InlineKeyboardButton(
+                "🌐 Back to VIP Menu",
+                callback_data="vip_menu"
+            )
         )
-    )
 
-    bot.edit_message_text(
-        text,
-        c.message.chat.id,
-        c.message.message_id,
-        reply_markup=keyboard
-    )
-    
-# ---------- PERFORMANCE ----------
-elif c.data == "vip_performance":
+        bot.edit_message_text(
+            text,
+            c.message.chat.id,
+            c.message.message_id,
+            reply_markup=keyboard
+        )
 
-    text = f"""
+    # ---------- PERFORMANCE ----------
+    elif c.data == "vip_performance":
+
+        text = f"""
 📈 VALUEHUNTER PERFORMANCE
 
 {performance()}
@@ -2409,79 +2410,77 @@ elif c.data == "vip_performance":
 {monthly_report()}
 """
 
-    keyboard = InlineKeyboardMarkup()
-    keyboard.add(
-        InlineKeyboardButton(
-            "🌐 Back to VIP Menu",
-            callback_data="vip_menu"
+        keyboard = InlineKeyboardMarkup()
+        keyboard.add(
+            InlineKeyboardButton(
+                "🌐 Back to VIP Menu",
+                callback_data="vip_menu"
+            )
         )
-    )
 
-    bot.edit_message_text(
-        text,
-        c.message.chat.id,
-        c.message.message_id,
-        reply_markup=keyboard
-    )
-
-# ---------- BANKROLL ----------
-elif c.data == "vip_bankroll":
-
-    text = bakroll_status()
-
-    keyboard = InlineKeyboardMarkup()
-    keyboard.add(
-        InlineKeyboardButton(
-            "🌐 Back to VIP Menu",
-            callback_data="vip_menu"
+        bot.edit_message_text(
+            text,
+            c.message.chat.id,
+            c.message.message_id,
+            reply_markup=keyboard
         )
-    )
 
-    bot.edit_message_text(
-        c.message.chat.id,
-        c.message.message_id,
-        reply_markup=keyboard
-    )
+    # ---------- BANKROLL ----------
+    elif c.data == "vip_bankroll":
 
-# ---------- ALERTS ----------
-elif c.data == "vip_alerts":
-    
-    text = market_alert()
-    
-    keyboard = InlineKeyboardMarkup()
-    keyboard.add(
-        InlineKeyboardButton(
-            "🌐 Back to VIP Menu",
-            callback_data="vip_menu"
+        text = bankroll_status()
+
+        keyboard = InlineKeyboardMarkup()
+        keyboard.add(
+            InlineKeyboardButton(
+                "🌐 Back to VIP Menu",
+                callback_data="vip_menu"
+            )
         )
-    )
 
-    bot.edit_message_text(
-        text,
-        c.message.chat.id,
-        c.message.message_id,
-        reply_markup=keyboard
-    )
+        bot.edit_message_text(
+            text,
+            c.message.chat.id,
+            c.message.message_id,
+            reply_markup=keyboard
+        )
 
-# ---------- VIP STATUS ----------
-elif c.data == "vip_status":
+    # ---------- ALERTS ----------
+    elif c.data == "vip_alerts":
 
-    vip_status(
-        c.message.chat.id,
-        c.message.message_id
-    )
+        text = market_alert()
 
-# ---------- VIP SUPPORT ----------
-elif c.data == "vip_support":
+        keyboard = InlineKeyboardMarkup()
+        keyboard.add(
+            InlineKeyboardButton(
+                "🌐 Back to VIP Menu",
+                callback_data="vip_menu"
+            )
+        )
 
-    vip_support(
-        c.message.chat.id,
-        c.message.message_id
-    )
-    
-# ================= ELITE PLANS =================
+        bot.edit_message_text(
+            text,
+            c.message.chat.id,
+            c.message.message_id,
+            reply_markup=keyboard
+        )
 
-    if c.data == "elite":
+    # ---------- VIP STATUS ----------
+    elif c.data == "vip_status":
+
+        vip_status(
+            c.message.chat.id
+        )
+
+    # ---------- VIP SUPPORT ----------
+    elif c.data == "vip_support":
+
+        vip_support(
+            c.message.chat.id
+        )
+
+    # ================= ELITE PLANS =================
+    elif c.data == "elite":
 
         m = InlineKeyboardMarkup()
 
@@ -2501,274 +2500,23 @@ high probability value opportunities.
 ━━━━━━━━━━━━━━
 
 🥉 BASIC — 50€
-
 • 1 Premium Value Bet per day  
-• Selected from the highest model edge  
 
 ━━━━━━━━━━━━━━
 
 🥇 PRO — 100€
-
 • 3 Premium Value Bets per day  
-• Full access to the model's top signals  
 
 ━━━━━━━━━━━━━━
 
 ⚡ DAY PASS — 25€
-
 • 24 hour PRO access  
-• Receive today's full signals  
 
-⚠️ Access is limited to members.
 Signals are released daily at 18:00.
 """,
             c.message.chat.id,
             c.message.message_id,
             reply_markup=m
-        )
-
-# ================= BASIC =================
-
-    elif c.data == "buy_basic":
-
-        link = create_payment(50, c.message.chat.id)
-
-        keyboard = InlineKeyboardMarkup()
-
-        keyboard.add(
-            InlineKeyboardButton(
-                "💳 Pay with Card / Crypto",
-                url=link
-            )
-        )
-
-        keyboard.add(
-            InlineKeyboardButton(
-                "⬅️ Back to plans",
-                callback_data="elite"
-            )
-        )
-
-        bot.send_message(
-            c.message.chat.id,
-"""
-🥉 BASIC ACCESS
-
-You are about to unlock VALUEHUNTER BASIC membership.
-
-• 1 Premium Value Bet per day  
-• Selected from the highest model edge  
-
-Signals released daily at 18:00.
-""",
-            reply_markup=keyboard
-        )
-
-# ================= PRO =================
-
-    elif c.data == "buy_pro":
-
-        link = create_payment(100, c.message.chat.id)
-
-        keyboard = InlineKeyboardMarkup()
-
-        keyboard.add(
-            InlineKeyboardButton(
-                "💳 Pay with Card / Crypto",
-                url=link
-            )
-        )
-
-        keyboard.add(
-            InlineKeyboardButton(
-                "⬅️ Back to plans",
-                callback_data="elite"
-            )
-        )
-
-        bot.send_message(
-            c.message.chat.id,
-"""
-🥇 VALUEHUNTER PRO ACCESS
-
-• 3 Premium Value Bets daily  
-• Highest model edge opportunities  
-• Full access to the model signals  
-
-Signals released daily at 18:00.
-""",
-            reply_markup=keyboard
-        )
-
-# ================= DAY PASS =================
-
-    elif c.data == "buy_day":
-
-        link = create_payment(25, c.message.chat.id)
-
-        keyboard = InlineKeyboardMarkup()
-
-        keyboard.add(
-            InlineKeyboardButton(
-                "💳 Pay with Card / Crypto",
-                url=link
-            )
-        )
-
-        keyboard.add(
-            InlineKeyboardButton(
-                "⬅️ Back to plans",
-                callback_data="elite"
-            )
-        )
-
-        bot.send_message(
-            c.message.chat.id,
-"""
-⚡ VALUEHUNTER DAY PASS
-
-• 24 hour PRO access  
-• Up to 3 premium signals today  
-
-Signals released at 18:00.
-""",
-            reply_markup=keyboard
-        )
-
-# ================= SAMPLE =================
-
-    elif c.data == "sample":
-
-        bet = daily_sample(c.message.chat.id)
-
-        bot.send_message(
-            c.message.chat.id,
-            f"🎁 FREE SAMPLE\n\n{bet}"
-        )
-
-        keyboard = InlineKeyboardMarkup()
-
-        keyboard.add(
-            InlineKeyboardButton(
-                "🔥 Unlock VIP Signals",
-                callback_data="elite"
-            )
-        )
-
-        keyboard.add(
-            InlineKeyboardButton(
-                "⚡ Market Alert",
-                callback_data="alert"
-            )
-        )
-
-        bot.send_message(
-            c.message.chat.id,
-"""
-🎁 FREE SAMPLE DELIVERED
-
-Elite members already received
-the full signal card for today.
-
-Unlock VIP access to receive all signals.
-""",
-            reply_markup=keyboard
-        )
-
-# ================= ALERT =================
-
-    elif c.data == "alert":
-
-        keyboard = InlineKeyboardMarkup()
-
-        keyboard.add(
-            InlineKeyboardButton(
-                "🔐 Unlock VIP Access",
-                callback_data="elite"
-            )
-        )
-
-        keyboard.add(
-            InlineKeyboardButton(
-                "⬅️ Back to plans",
-                callback_data="back_menu"
-            )
-        )
-
-        bot.send_message(
-            c.message.chat.id,
-            market_alert(),
-            reply_markup=keyboard
-        )
-
-# ================= PERFORMANCE =================
-
-    elif c.data == "perf":
-
-        keyboard = InlineKeyboardMarkup()
-
-        keyboard.add(
-            InlineKeyboardButton(
-                "🔐 Unlock VIP Access",
-                callback_data="elite"
-            )
-        )
-
-        keyboard.add(
-            InlineKeyboardButton(
-                "⬅️ Back to plans",
-                callback_data="back_menu"
-            )
-        )
-
-        bot.send_message(
-            c.message.chat.id,
-            f"""
-📊 VALUEHUNTER PERFORMANCE
-
-{performance()}
-
-📈 MONTHLY RESULTS
-
-{monthly_report()}
-""",
-            reply_markup=keyboard
-        )
-
-# ================= SUPPORT =================
-
-    elif c.data == "support":
-
-        keyboard = InlineKeyboardMarkup()
-
-        keyboard.add(
-            InlineKeyboardButton(
-                "⬅️ Back to plans",
-                callback_data="back_menu"
-            )
-        )
-
-        bot.send_message(
-            c.message.chat.id,
-"""
-💬 VALUEHUNTER SUPPORT
-
-Contact:
-
-🔹 @MrMasterlegacy1
-""",
-            reply_markup=keyboard
-        )
-
-# ================= BACK =================
-
-    elif c.data == "back_menu":
-
-        bot.edit_message_text(
-            "👁‍🗨 VALUEHUNTER MENU",
-            c.message.chat.id,
-            c.message.message_id,
-            reply_markup=main_menu()
         )
         
 @bot.message_handler(commands=["sendvip"])
