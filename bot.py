@@ -2203,7 +2203,7 @@ def callbacks(c):
     bot.answer_callback_query(c.id)
     
 # ---------- VIP DASHBOARD ----------
-elif c.data == "vip_dashboard":
+if c.data == "vip_dashboard":
 
     send_vip_dashboard(
         c.message.chat.id,
