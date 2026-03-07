@@ -2221,21 +2221,7 @@ elif c.data == "vip_menu":
 # ---------- MODEL INSIGHTS ----------
 elif c.data == "model_insights":
 
-    keyboard = InlineKeyboardMarkup()
-    keyboard.add(
-        InlineKeyboardButton(
-            "🌐 Back to Dashboard",
-            callback_data="vip_dashboard"
-        )
-    )
-
-    bot.edit_message_text(
-        text,
-        c.message.chat.id,
-        c.message.message_id,
-        reply_markup=keyboard
-    )
-        """
+    text = """
 📡 MODEL INSIGHTS
 
 The ValueHunter analytics engine scans hundreds of football matches daily to detect bookmaker pricing inefficiencies.
@@ -2246,14 +2232,10 @@ The ValueHunter analytics engine scans hundreds of football matches daily to det
 💰 Liquidity signals  
 
 Only the strongest value opportunities pass the model filters and reach Elite members.
-""",
-        reply_markup=keyboard
-    )
-
-# ---------- BETTING STRATEGY ----------
-elif c.data == "betting_strategy":
+"""
 
     keyboard = InlineKeyboardMarkup()
+
     keyboard.add(
         InlineKeyboardButton(
             "🌐 Back to Dashboard",
@@ -2267,7 +2249,11 @@ elif c.data == "betting_strategy":
         c.message.message_id,
         reply_markup=keyboard
     )
-        """
+
+# ---------- BETTING STRATEGY ----------
+elif c.data == "betting_strategy":
+
+    text = """
 🧠 BETTING STRATEGY
 
 The ValueHunter system focuses on long-term profitable betting.
@@ -2278,12 +2264,7 @@ Recommended staking model:
 📊 1-3 value bets daily  
 
 Consistent discipline allows members to replicate the same bankroll growth curve as the model.
-""",
-        reply_markup=keyboard
-    )
-
-# ---------- RESULTS FEED ----------
-elif c.data == "vip_results":
+"""
 
     keyboard = InlineKeyboardMarkup()
     keyboard.add(
@@ -2299,7 +2280,10 @@ elif c.data == "vip_results":
         c.message.message_id,
         reply_markup=keyboard
     )
-        """
+# ---------- RESULTS FEED ----------
+elif c.data == "vip_results":
+
+    text = """
 💸 VIP RESULTS FEED
 
 Recent signals from the ValueHunter network:
@@ -2310,7 +2294,21 @@ Recent signals from the ValueHunter network:
 ✔ Over 1.5 — WIN  
 
 The ValueHunter system focuses on identifying bookmaker pricing errors rather than predicting every match.
-""",
+"""
+
+    keyboard = InlineKeyboardMarkup()
+
+    keyboard.add(
+        InlineKeyboardButton(
+            "🌐 Back to Dashboard",
+            callback_data="vip_dashboard"
+        )
+    )
+
+    bot.edit_message_text(
+        text,
+        c.message.chat.id,
+        c.message.message_id,
         reply_markup=keyboard
     )
     
