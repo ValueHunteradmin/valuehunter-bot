@@ -494,7 +494,7 @@ def poisson_matrix(home_xg,away_xg):
 
 # ---------- MONTE CARLO ----------
 
-def monte_carlo_simulation(home_xg,away_xg,simulations=1000):
+def monte_carlo_simulation(home_xg,away_xg,simulations=3000):
 
     home_wins=0
 
@@ -1149,7 +1149,7 @@ def get_value_bets():
                 odds_value
             )
 
-            if edge < 0.05 or prob < 0.56:
+            if edge < 0.035 or prob < 0.54:
                 continue
 
             ev = calculate_ev(prob, odds_value)
@@ -1322,6 +1322,23 @@ f"""🔥 HIGH VALUE
 
 💸 Bet: 50€"""
         )
+        
+    # ---------- FALLBACK BET ----------
+    if not signals and ranked:
+
+        bet = ranked[0]
+
+        signals.append(
+f"""🔥 VALUE BET
+
+⚽ {bet['match']}
+🎯 {bet['pick']}
+📊 Odds {round(bet['odds'],2)}
+📈 Probability {round(bet['prob']*100)}%
+💰 Value {round(bet['ev'],2)}
+
+💸 Bet: 50€"""
+    )
 
     league_odds_cache.clear()
     team_stats_cache.clear()
