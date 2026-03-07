@@ -2281,8 +2281,6 @@ The 𝑽𝑨𝑳𝑼𝑬𝑯𝑼𝑵𝑻𝑬𝑹 analytics engine is currently s
 ━━━━━━━━━━━━━━
 🎖️ 𝑬𝑳𝑰𝑻𝑬 𝑵𝑬𝑻𝑾𝑶𝑹𝑲
 
-🧑🏼‍💻 𝟏𝟕 𝑴𝑬𝑴𝑩𝑬𝑹𝑺 𝑷𝑹𝑬𝑷𝑨𝑹𝑰𝑵𝑮 𝑻𝑶𝑫𝑨𝒀'𝑺 𝑩𝑬𝑻𝑺
-
 ⏳ 𝑺𝑰𝑮𝑵𝑨𝑳 𝑹𝑬𝑳𝑬𝑨𝑺𝑬 𝑰𝑵
 {countdown}
 
@@ -2397,7 +2395,7 @@ def vip_status(user_id, message_id=None):
     else:
         bot.send_message(user_id, text, reply_markup=keyboard)
         
-def signal_countdown():
+def signal_timer():
 
     tz = pytz.timezone("Europe/Athens")
 
@@ -2406,7 +2404,7 @@ def signal_countdown():
     target = now.replace(hour=18, minute=0, second=0, microsecond=0)
 
     if now >= target:
-        return "00:00:00"
+        target = target + timedelta(days=1)
 
     diff = target - now
 
@@ -2416,7 +2414,14 @@ def signal_countdown():
     minutes = (total_seconds % 3600) // 60
     seconds = total_seconds % 60
 
-    return f"{hours:02}:{minutes:02}:{seconds:02}"
+    countdown = f"{hours:02}:{minutes:02}:{seconds:02}"
+
+    if now.hour < 18:
+        label = "Signal release in"
+    else:
+        label = "Next signals in"
+
+    return label, countdown
     
 # ================= TELEGRAM =================
 
@@ -2429,7 +2434,7 @@ def start(m):
         send_vip_dashboard(user_id)
         return
         
-    countdown = signal_countdown()
+    label, countdown = signal_timer()
 
     bot.send_message(
         m.chat.id,
@@ -2447,7 +2452,8 @@ Full access to the 𝑬𝑳𝑰𝑻𝑬 𝑩𝑬𝑻𝑻𝑰𝑵𝑮 𝑵𝑬�
 
 ━━━━━━━━━━━━━━
 
-Signal release in  
+{label}
+
 {countdown}
 
 ━━━━━━━━━━━━━━
@@ -2811,7 +2817,7 @@ The 𝑽𝑨𝑳𝑼𝑬𝑯𝑼𝑵𝑻𝑬𝑹 analytics engine scans hundreds
 
         keyboard.add(
             InlineKeyboardButton(
-                "⬅️ 𝑩𝑨𝑪𝑲 𝑻𝑶 𝑷𝑳𝑨𝑵𝑺",
+                "◀ 𝑩𝑨𝑪𝑲 𝑻𝑶 𝑷𝑳𝑨𝑵𝑺",
                 callback_data="elite"
             )
         )
@@ -3041,7 +3047,7 @@ Our support team will respond as soon as possible.
 
     elif c.data == "back_menu":
 
-        countdown = signal_countdown()
+        label, countdown = signal_timer()
 
         bot.edit_message_text(
 f"""
@@ -3058,7 +3064,8 @@ Full access to the 𝑬𝑳𝑰𝑻𝑬 𝑩𝑬𝑻𝑻𝑰𝑵𝑮 𝑵𝑬�
 
 ━━━━━━━━━━━━━━
 
-⏳ Signal release in  
+{label}
+
 {countdown}
 
 ━━━━━━━━━━━━━━
@@ -3087,7 +3094,7 @@ def sendvip(m):
         else:
             picks = bets[:3]
 
-        text = "🔥 VIP SIGNALS\n\n" + "\n\n".join(picks)
+        text = "🎖️ VIP SIGNALS\n\n" + "\n\n".join(picks)
 
         bot.send_message(uid,text)
 
