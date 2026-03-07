@@ -163,7 +163,7 @@ def main_menu():
     m.add(InlineKeyboardButton("🔥 Unlock VIP Signals", callback_data="elite"))
     m.add(InlineKeyboardButton("🎁 Today's FREE Bet", callback_data="sample"))
     m.add(InlineKeyboardButton("⚡ Market Alert", callback_data="alert"))
-    m.add(InlineKeyboardButton("📊 Performance", callback_data="perf"))
+    m.add(InlineKeyboardButton("🏆 Performance", callback_data="perf"))
     m.add(InlineKeyboardButton("💬 Support", callback_data="support"))
 
     return m
@@ -261,10 +261,11 @@ def webhook():
 
 Welcome to VALUEHUNTER ELITE.
 
-🔑Your access is now active
+🔐 Your access is now active
 
 🕔 17:00 Model release
-🕕 18:00 VIP signals
+🕕 18:00 VIP signals 
+🇬🇷 (Athens Time)
 """
     )
     
@@ -974,11 +975,11 @@ def grade_results():
 
         ⚽ {match}
         🎯 {pick}
-        📊 Odds {odds}
+        🚀 Odds {odds}
 
         VIP members collected another win today.
         
-        📡 Next signals released at 18:00...
+        📡 Next signals released at 18:00🇬🇷
 
         🔐 Support: @MrMasterlegacy1
         """
@@ -1002,6 +1003,7 @@ def grade_results():
 
             ⚽ {match}
             🎯 {pick}
+            🚀 Odds {odds}
 
             Elite members collected another **winning signal** today.
 
@@ -1585,7 +1587,7 @@ def market_alert():
     new_odds = round(open_odds - drop,2)
     
     alert_text = f"""
-🚨 SHARP MONEY ALERT
+🚨 SHARP MONEY ALERT 🚨
 
 ⚽ {home} vs {away}
 
@@ -1617,19 +1619,23 @@ def start_conversion_funnel(user_id):
             bot.send_message(
                 user_id,
 """
-📡 MODEL UPDATE
+📡 𝑴𝑶𝑫𝑬𝑳 𝑼𝑷𝑫𝑨𝑻𝑬
 
 The ValueHunter analytics engine has already started scanning today's football markets.
 
-Several **high probability value opportunities** have been detected.
+Several -high probability value opportunities- have already been detected by the system.
 
-Elite members will receive the final signals before the market reacts.
+Elite members will receive the **final signals before the market reacts**.
 
 ━━━━━━━━━━━━━━
 
-⚠️ Access is currently open but may close once signals are released.
+⚠️ 𝑳𝑰𝑴𝑰𝑻𝑬𝑫 𝑬𝑵𝑻𝑹𝒀 𝑾𝑰𝑵𝑫𝑶𝑾
 
-Use the menu to unlock access.
+Access to the ValueHunter network is currently open, but may close once today's signals are released.
+
+Secure your position before the market moves.
+
+⬇️ Use the menu below to unlock access.
 """
             )
         except:
@@ -1643,19 +1649,24 @@ Use the menu to unlock access.
             bot.send_message(
                 user_id,
 """
-⚡ MARKET MOVEMENT DETECTED
+🏪 𝑴𝑨𝑹𝑲𝑬𝑻 𝑴𝑶𝑽𝑬𝑴𝑬𝑵𝑻 𝑫𝑬𝑻𝑬𝑪𝑻𝑬𝑫
 
-The system has detected **unusual betting activity** on today's matches.
+The ValueHunter system has detected **unusual betting activity across today's football markets.
 
-Sharp money is entering the market.
+Sharp money is currently entering the market.
 
-When this happens, odds usually drop quickly.
+When this happens, -odds tend to drop very quickly- as bookmakers react to large professional bets.
 
 ━━━━━━━━━━━━━━
 
-Elite members will receive the signal **before the market moves**.
+Elite members will receive the **official signal before the market reacts**.
 
-Signals release today at **18:00**.
+⏰ 𝑺𝑰𝑮𝑵𝑨𝑳 𝑹𝑬𝑳𝑬𝑨𝑺𝑬  
+🕕 18:00 (Europe/Athens)
+
+━━━━━━━━━━━━━━
+
+⚠️ Access to the ValueHunter network may close once signals are released.
 """
             )
         except:
@@ -1783,7 +1794,7 @@ def monthly_report():
             profit -= stake
 
     return f"""
-📊 MONTHLY REPORT
+🏆 MONTHLY REPORT
 
 Wins: {wins}
 Losses: {losses}
@@ -1998,13 +2009,13 @@ def expiry_reminders():
                 text = """
 ⚠️ YOUR DAY PASS IS EXPIRING SOON
 
-Your 24 hour ValueHunter access** will expire in less than 1 hour.
+Your 24 hour ValueHunter access will expire in less than 1 hour.
 
-We hope you enjoyed experiencing the **ValueHunter Elite system** today.
+We hope you enjoyed experiencing the ValueHunter Elite system today.
 
-Every day our model scans hundreds of matches to uncover **hidden bookmaker value opportunities**.
+Every day our model scans hundreds of matches to uncover hidden bookmaker value opportunities.
 
-🔥 Today's members are already preparing the next signals.
+💠 Today's members are already preparing the next signals.
 
 If your access expires, you may miss the next opportunities.
 
@@ -2025,7 +2036,7 @@ Your ValueHunter Elite membership will expire in less than 1 hour.
 
 Every day our analytics engine scans hundreds of matches to identify **high value betting opportunities** before the market moves.
 
-🔥 The next signals will be released again at **18:00**.
+💎 The next signals will be released again at **18:00**.
 
 If your access expires now, you may miss the upcoming value opportunities that our members are preparing for.
 
@@ -2076,7 +2087,7 @@ def vip_initialization_animation(user_id):
 
     message = bot.send_message(
         user_id,
-        "⚙️ Initializing ValueHunter System...\n\n⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜"
+        "⛓️‍💥 Initializing ValueHunter System...\n\n⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜"
     )
 
     blocks = [
@@ -2098,7 +2109,7 @@ def vip_initialization_animation(user_id):
 
         try:
             bot.edit_message_text(
-                f"⚙️ Initializing ValueHunter System...\n\n{bar}",
+                f"⛓️‍💥 Initializing ValueHunter System...\n\n{bar}",
                 user_id,
                 message.message_id
             )
@@ -2126,7 +2137,7 @@ def vip_dashboard_keyboard():
 def send_vip_dashboard(user_id, message_id=None):
 
     text = """
-👑 𝑽𝑨𝑳𝑼𝑬𝑯𝑼𝑵𝑻𝑬𝑹 𝑬𝑳𝑰𝑻𝑬 𝑵𝑬𝑻𝑾𝑶𝑹𝑲
+⚜️ 𝑽𝑨𝑳𝑼𝑬𝑯𝑼𝑵𝑻𝑬𝑹 𝑬𝑳𝑰𝑻𝑬 𝑵𝑬𝑻𝑾𝑶𝑹𝑲
 
 Welcome inside the private ValueHunter intelligence system.
 
@@ -2143,7 +2154,7 @@ You now have access to a restricted betting analytics network designed to detect
 
 📡 System Status
 
-🟢 Data feeds active  
+📟 Data feeds active  
 🟢 Market monitoring active  
 🟢 Model scanning global leagues  
 
@@ -2173,7 +2184,7 @@ def vip_menu_keyboard():
 
     m = InlineKeyboardMarkup()
 
-    m.add(InlineKeyboardButton("📊 Today's Signals", callback_data="vip_signals"))
+    m.add(InlineKeyboardButton("🎖️ Today's Signals", callback_data="vip_signals"))
 
     m.add(InlineKeyboardButton("📈 Model Performance", callback_data="vip_performance"))
 
@@ -2181,11 +2192,11 @@ def vip_menu_keyboard():
 
     m.add(InlineKeyboardButton("⚡ Early Market Alerts", callback_data="vip_alerts"))
 
-    m.add(InlineKeyboardButton("📅 VIP Status", callback_data="vip_status"))
+    m.add(InlineKeyboardButton("🫆 VIP Status", callback_data="vip_status"))
 
-    m.add(InlineKeyboardButton("💬 VIP Support", callback_data="vip_support"))
+    m.add(InlineKeyboardButton("🧑🏼‍💻 VIP Support", callback_data="vip_support"))
 
-    m.add(InlineKeyboardButton("🌐 Back to Dashboard", callback_data="vip_dashboard"))
+    m.add(InlineKeyboardButton("🎗️ Back to Dashboard", callback_data="vip_dashboard"))
 
     return m
     
@@ -2206,7 +2217,7 @@ The ValueHunter analytics engine is currently scanning today's football markets.
 
 ⏳ Official signal release:
 
-🕕 18:00
+🕕 18:00 (AthensTime)
 
 Elite members are preparing their positions.
 """
@@ -2351,7 +2362,7 @@ This platform is operated by a professional analytics team focused on detecting 
 
 ━━━━━━━━━━━━━━
 
-📊 Our models analyze:
+👑 Our models analyze:
 
 ⚙️ Advanced Expected Goals data  
 📉 Market inefficiencies  
@@ -2698,6 +2709,7 @@ high probability value opportunities.
 • 24 hour PRO access  
 
 Signals are released daily at 18:00.
+• ATHENS TIME 🇬🇷
 """,
             c.message.chat.id,
             c.message.message_id,
@@ -2808,6 +2820,7 @@ Signals released daily at 18:00.
 • Up to 3 premium signals today  
 
 Signals released at 18:00.
+• ATHENS TIME 🇬🇷
 """,
             reply_markup=keyboard
         )
@@ -2900,11 +2913,28 @@ Signals released at 18:00.
         bot.send_message(
             c.message.chat.id,
 """
-💬 VALUEHUNTER SUPPORT
+💬 𝑽𝑨𝑳𝑼𝑬𝑯𝑼𝑵𝑻𝑬𝑹 𝑷𝑹𝑬𝑴𝑰𝑼𝑴 𝑺𝑼𝑷𝑷𝑶𝑹𝑻
 
-Contact:
+Welcome to the official ValueHunter support channel.
+
+Our team is available to assist Elite members with:
+
+⚙️ Membership access  
+📊 Signal delivery  
+💳 Payment verification  
+📡 System assistance  
+
+━━━━━━━━━━━━━━
+
+📩 Direct Support
 
 🔹 @MrMasterlegacy1
+
+━━━━━━━━━━━━━━
+
+⚡ Elite members receive **priority assistance** from the ValueHunter team.
+
+Our support team will respond as soon as possible.
 """,
             reply_markup=keyboard
         )
