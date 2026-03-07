@@ -160,11 +160,11 @@ def main_menu():
 
     m = InlineKeyboardMarkup()
 
-    m.add(InlineKeyboardButton("🔥 Unlock VIP Signals", callback_data="elite"))
-    m.add(InlineKeyboardButton("🎁 Today's FREE Bet", callback_data="sample"))
-    m.add(InlineKeyboardButton("⚡ Market Alert", callback_data="alert"))
-    m.add(InlineKeyboardButton("🏆 Performance", callback_data="perf"))
-    m.add(InlineKeyboardButton("💬 Support", callback_data="support"))
+    m.add(InlineKeyboardButton("⚜️ 𝑼𝑵𝑳𝑶𝑪𝑲 𝑽𝑰𝑷 𝑺𝑰𝑮𝑵𝑨𝑳𝑺", callback_data="elite"))
+    m.add(InlineKeyboardButton("🎁 𝑻𝑶𝑫𝑨𝒀'𝑺 𝑭𝑹𝑬𝑬 𝑩𝑬𝑻", callback_data="sample"))
+    m.add(InlineKeyboardButton("⚡ 𝑴𝑨𝑹𝑲𝑬𝑻 𝑨𝑳𝑬𝑹𝑻", callback_data="alert"))
+    m.add(InlineKeyboardButton("🎖️ 𝑷𝑬𝑹𝑭𝑶𝑹𝑴𝑨𝑵𝑪𝑬", callback_data="perf"))
+    m.add(InlineKeyboardButton("💬 𝑺𝑼𝑷𝑷𝑶𝑹𝑻", callback_data="support"))
 
     return m
 
@@ -261,9 +261,9 @@ def webhook():
 
 Your payment has been successfully confirmed.
 
-Welcome to the - VALUEHUNTER ELITE NETWORK.
+Welcome to the 𝑽𝑨𝑳𝑼𝑬𝑯𝑼𝑵𝑻𝑬𝑹 𝑬𝑳𝑰𝑻𝑬 𝑵𝑬𝑻𝑾𝑶𝑹𝑲.
 
-You now have access to a **restricted betting intelligence system** designed to detect bookmaker pricing inefficiencies and high-probability value opportunities across global football markets.
+You now have access to a -restricted betting intelligence system- designed to detect bookmaker pricing inefficiencies and high-probability value opportunities across global football markets.
 
 ━━━━━━━━━━━━━━
 
@@ -1455,8 +1455,7 @@ def daily_sample(user_id):
             hours = remaining // 3600
 
             return f"""
-⏳ Free sample already used.
-
+⏳ 𝑭𝑹𝑬𝑬 𝑺𝑨𝑴𝑷𝑳𝑬 𝑨𝑳𝑹𝑬𝑨𝑫𝒀 𝑼𝑺𝑬𝑫
 Next free bet available in {hours} hours.
 """
 
@@ -1533,7 +1532,7 @@ Scanning leagues ███░░░░░░
 """
 ⚠️ The system is still finalizing today's analysis.
 
-Please try again in a few minutes.
+𝗣𝗟𝗘𝗔𝗦𝗘 𝗧𝗥𝗬 𝗔𝗚𝗔𝗜𝗡 𝗜𝗡 𝗔 𝗙𝗘𝗪 𝗠𝗜𝗡𝗨𝗧𝗘𝗦.
 """,
             user_id,
             msg.message_id
@@ -1568,7 +1567,8 @@ f"""
 
 This opportunity was detected during today's model analysis.
 
-Elite members receive the **full signal card daily at 18:00**.
+Elite members receive the -full signal card daily at 18:00-.
+• 𝗔𝗧𝗛𝗘𝗡𝗦 𝗧𝗜𝗠𝗘 🇬🇷
 """,
         user_id,
         msg.message_id,
@@ -1607,7 +1607,7 @@ def market_alert():
 Odds dropped:
 {open_odds} → {new_odds}
 
-Heavy betting activity detected.
+𝗛𝗘𝗔𝗩𝗬 𝗕𝗘𝗧𝗧𝗜𝗡𝗚 𝗔𝗖𝗧𝗜𝗩𝗜𝗧𝗬 𝗗𝗘𝗧𝗘𝗖𝗧𝗘𝗗.
 
 ━━━━━━━━━━━━━━
 
@@ -1634,7 +1634,7 @@ def start_conversion_funnel(user_id):
 """
 📡 𝑴𝑶𝑫𝑬𝑳 𝑼𝑷𝑫𝑨𝑻𝑬
 
-The ValueHunter analytics engine has already started scanning today's football markets.
+The 𝑽𝑨𝑳𝑼𝑬𝑯𝑼𝑵𝑻𝑬𝑹 analytics engine has already started scanning today's football markets.
 
 Several -high probability value opportunities- have already been detected by the system.
 
@@ -1675,7 +1675,7 @@ When this happens, -odds tend to drop very quickly- as bookmakers react to large
 Elite members will receive the **official signal before the market reacts**.
 
 💡 𝑺𝑰𝑮𝑵𝑨𝑳 𝑹𝑬𝑳𝑬𝑨𝑺𝑬  
-🕕 18:00 (Europe/Athens)🇬🇷
+🕕 𝟭𝟴:𝟬𝟬 — 𝗔𝗧𝗛𝗘𝗡𝗦 𝗧𝗜𝗠𝗘 🇬🇷
 
 ━━━━━━━━━━━━━━
 
@@ -1692,7 +1692,7 @@ Elite members will receive the **official signal before the market reacts**.
         keyboard = InlineKeyboardMarkup()
         keyboard.add(
             InlineKeyboardButton(
-                "🔐 Unlock Elite Access",
+                "⚜️ 𝑼𝑵𝑳𝑶𝑪𝑲 𝑬𝑳𝑰𝑻𝑬 𝑨𝑪𝑪𝑬𝑺𝑺",
                 callback_data="elite"
             )
         )
@@ -1711,7 +1711,7 @@ Our model 𝑽𝑨𝑳𝑼𝑬𝑯𝑼𝑵𝑻𝑬𝑹 has already selected the 
 
 ⚠️ Once signals are released, access may close to protect the betting edge.
 
-Elite members are already preparing today's bets.
+𝗘𝗟𝗜𝗧𝗘 𝗠𝗘𝗠𝗕𝗘𝗥𝗦 𝗔𝗥𝗘 𝗔𝗟𝗥𝗘𝗔𝗗𝗬 𝗣𝗥𝗘𝗣𝗔𝗥𝗜𝗡𝗚 𝗧𝗢𝗗𝗔𝗬’𝗦 𝗕𝗘𝗧𝗦.
 
 Secure your access before the release.
 """,
@@ -1765,18 +1765,18 @@ def performance():
     return f"""
 📊 𝑫𝑨𝑰𝑳𝒀 𝑷𝑬𝑹𝑭𝑶𝑹𝑴𝑨𝑵𝑪𝑬
 
-Wins: {dw}
-Losses: {dl}
+𝗪𝗜𝗡𝗦: {dw}
+𝗟𝗢𝗦𝗦𝗘𝗦: {dl}
 
-Profit: {round(dp,2)} €
+𝗣𝗥𝗢𝗙𝗜𝗧: {round(dp,2)} €
 
 
 📈 𝑾𝑬𝑬𝑲𝑳𝒀 𝑷𝑬𝑹𝑭𝑶𝑹𝑴𝑨𝑵𝑪𝑬
 
-Wins: {ww}
-Losses: {wl}
+𝗪𝗜𝗡𝗦: {ww}
+𝗟𝗢𝗦𝗦𝗘𝗦: {wl}
 
-Profit: {round(wp,2)} €
+𝗣𝗥𝗢𝗙𝗜𝗧: {round(wp,2)} €
 """
 
 # ---------- MONTHLY REPORT ----------
@@ -1809,10 +1809,10 @@ def monthly_report():
     return f"""
 🏆 𝑴𝑶𝑵𝑻𝑯𝑳𝒀 𝑹𝑬𝑷𝑶𝑹𝑻
 
-Wins: {wins}
-Losses: {losses}
+𝗪𝗜𝗡𝗦: {wins}
+𝗟𝗢𝗦𝗦𝗘𝗦: {losses}
 
-Profit: {round(profit,2)} €
+𝗣𝗥𝗢𝗙𝗜𝗧: {round(profit,2)} €
 """
 
 # ---------- BANKROLL TRACKER ----------
@@ -1840,10 +1840,10 @@ def bankroll_status():
     return f"""
 🏧 𝑩𝑨𝑵𝑲𝑹𝑶𝑳𝑳
 
-Starting: {START_BANKROLL}€
-Current: {round(bankroll,2)}€
+𝗦𝗧𝗔𝗥𝗧𝗜𝗡𝗚: {START_BANKROLL}€
+𝗖𝗨𝗥𝗥𝗘𝗡𝗧: {round(bankroll,2)}€
 
-ROI: {round(roi,2)}%
+𝗥𝗢𝗜: {round(roi,2)}%
 """
 
 # ================= AUTO SIGNALS =================
@@ -1893,7 +1893,7 @@ def send_signals():
             keyboard = InlineKeyboardMarkup()
             keyboard.add(
                 InlineKeyboardButton(
-                    "🔐 Unlock VIP Signals",
+                    "⚜️ 𝑼𝑵𝑳𝑶𝑪𝑲 𝑽𝑰𝑷 𝑺𝑰𝑮𝑵𝑨𝑳𝑺",
                     callback_data="elite"
                 )
             )
@@ -1909,9 +1909,9 @@ def send_signals():
 
             ⚠️ 𝑽𝑰𝑷 signals will be released at 18:00.(Europe/Athens)🇬🇷
 
-            Members are already preparing today's bets.
+            𝗠𝗘𝗠𝗕𝗘𝗥𝗦 𝗔𝗥𝗘 𝗔𝗟𝗥𝗘𝗔𝗗𝗬 𝗣𝗥𝗘𝗣𝗔𝗥𝗜𝗡𝗚 𝗧𝗢𝗗𝗔𝗬’𝗦 𝗕𝗘𝗧𝗦.
 
-            Secure access before the release.
+            𝗦𝗘𝗖𝗨𝗥𝗘 𝗔𝗖𝗖𝗘𝗦𝗦 𝗕𝗘𝗙𝗢𝗥𝗘 𝗧𝗛𝗘 𝗥𝗘𝗟𝗘𝗔𝗦𝗘.
             """
 
             for uid in users:
@@ -2011,7 +2011,7 @@ def expiry_reminders():
 
             keyboard.add(
                 InlineKeyboardButton(
-                    "🔓 Renew VIP Access",
+                    "⚜️ 𝑹𝑬𝑵𝑬𝑾 𝑽𝑰𝑷 𝑨𝑪𝑪𝑬𝑺𝑺",
                     callback_data="elite"
                 )
             )
@@ -2028,15 +2028,16 @@ We hope you enjoyed experiencing the ValueHunter Elite system today.
 
 Every day our model scans hundreds of matches to uncover hidden bookmaker value opportunities.
 
-💠 Today's members are already preparing the next signals.
+
+💎 Today's members are already preparing the next signals.
 
 If your access expires, you may miss the next opportunities.
 
 ━━━━━━━━━━━━━━
 
-🥇Thank you for trying 𝑽𝑨𝑳𝑼𝑬𝑯𝑼𝑵𝑻𝑬𝑹.
+🎖️ Thank you for trying 𝑽𝑨𝑳𝑼𝑬𝑯𝑼𝑵𝑻𝑬𝑹.
 
-You can continue receiving signals by activating a membership below.
+𝗬𝗢𝗨 𝗖𝗔𝗡 𝗖𝗢𝗡𝗧𝗜𝗡𝗨𝗘 𝗥𝗘𝗖𝗘𝗜𝗩𝗜𝗡𝗚 𝗦𝗜𝗚𝗡𝗔𝗟𝗦 𝗕𝗬 𝗔𝗖𝗧𝗜𝗩𝗔𝗧𝗜𝗡𝗚 𝗔 𝗠𝗘𝗠𝗕𝗘𝗥𝗦𝗛𝗜𝗣 𝗕𝗘𝗟𝗢𝗪.
 """
 
             # ---------- BASIC / PRO ----------
@@ -2049,13 +2050,14 @@ Your 𝑽𝑨𝑳𝑼𝑬𝑯𝑼𝑵𝑻𝑬𝑹 𝑬𝑳𝑰𝑻𝑬 membershi
 
 Every day our analytics engine scans hundreds of matches to identify **high value betting opportunities** before the market moves.
 
+
 💎 The next signals will be released again at **18:00**.
 
 If your access expires now, you may miss the upcoming value opportunities that our members are preparing for.
 
 ━━━━━━━━━━━━━━
 
-Thank you for being part of the **ValueHunter Elite network**.
+Thank you for being part of the -ValueHunter Elite network-.
 
 Renew your access below to continue receiving signals.
 """
@@ -2100,7 +2102,7 @@ def vip_initialization_animation(user_id):
 
     message = bot.send_message(
         user_id,
-        "⛓️‍💥 Initializing ValueHunter System...\n\n⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜"
+        "🌐 Initializing ValueHunter System...\n\n⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜"
     )
 
     blocks = [
@@ -2122,7 +2124,7 @@ def vip_initialization_animation(user_id):
 
         try:
             bot.edit_message_text(
-                f"⛓️‍💥 Initializing ValueHunter System...\n\n{bar}",
+                f"🔍 Initializing ValueHunter System...\n\n{bar}",
                 user_id,
                 message.message_id
             )
@@ -2173,8 +2175,8 @@ You now have access to a restricted betting analytics network designed to detect
 
 ━━━━━━━━━━━━━━
 
-⏳ Next signal release  
-🕕 18:00 (Europe/Athens)
+⏳ 𝗡𝗘𝗫𝗧 𝗦𝗜𝗚𝗡𝗔𝗟 𝗥𝗘𝗟𝗘𝗔𝗦𝗘
+🕕 𝟭𝟴:𝟬𝟬 (𝗘𝗨𝗥𝗢𝗣𝗘/𝗔𝗧𝗛𝗘𝗡𝗦) 🇬🇷
 
 ⚠️ Signals inside this network are shared with a limited number of Elite members to protect the betting edge.
 """
@@ -2229,8 +2231,7 @@ The 𝑽𝑨𝑳𝑼𝑬𝑯𝑼𝑵𝑻𝑬𝑹 analytics engine is currently s
 💎 Value opportunities being filtered  
 
 ⏳ 𝑶𝑭𝑭𝑰𝑪𝑰𝑨𝑳 𝑺𝑰𝑮𝑵𝑨𝑳 𝑹𝑬𝑳𝑬𝑨𝑺𝑬:
-
-🕕 18:00 (AthensTime)
+🕕 𝟭𝟴:𝟬𝟬 (𝗘𝗨𝗥𝗢𝗣𝗘/𝗔𝗧𝗛𝗘𝗡𝗦) 🇬🇷
 
 Elite members are preparing their positions.
 """
@@ -2240,13 +2241,13 @@ Elite members are preparing their positions.
         text = """
 ⚜️ 𝑽𝑰𝑷 𝑺𝑰𝑮𝑵𝑨𝑳 𝑪𝑬𝑵𝑻𝑬𝑹
 
-Today's ValueHunter signals have been released to the Elite network.
+Today's 𝑽𝑨𝑳𝑼𝑬𝑯𝑼𝑵𝑻𝑬𝑹 signals have been released to the Elite network.
 
 📊 Model probabilities calculated  
 📡 Market pressure analysed  
 💎 Premium value opportunities identified  
 
-Elite members are already placing today's bets.
+𝗘𝗟𝗜𝗧𝗘 𝗠𝗘𝗠𝗕𝗘𝗥𝗦 𝗔𝗥𝗘 𝗔𝗟𝗥𝗘𝗔𝗗𝗬 𝗣𝗟𝗔𝗖𝗜𝗡𝗚 𝗧𝗢𝗗𝗔𝗬’𝗦 𝗕𝗘𝗧𝗦.
 """
 
     if message_id:
@@ -2272,7 +2273,7 @@ Need assistance with signals or membership access?
 
 ━━━━━━━━━━━━━━
 
-📩 Contact support:
+📩 𝗖𝗢𝗡𝗧𝗔𝗖𝗧 𝗦𝗨𝗣𝗣𝗢𝗥𝗧:
 
 @MrMasterlegacy1
 """
@@ -2308,13 +2309,13 @@ def vip_status(user_id, message_id=None):
     text = f"""
 📅 𝑬𝑳𝑰𝑻𝑬 𝑴𝑬𝑴𝑩𝑬𝑹𝑺𝑯𝑰𝑷
 
-👤 User ID: {user_id}
+👤 𝗨𝗦𝗘𝗥 𝗜𝗗: {user_id}
 
-💎 Plan: {plan}
+💎 𝗣𝗟𝗔𝗡: {plan}
 
-📊 Signals per day: up to 3
+📊 𝗦𝗜𝗚𝗡𝗔𝗟𝗦 𝗣𝗘𝗥 𝗗𝗔𝗬: up to 3
 
-⏳ Access expires:
+⏳ 𝗔𝗖𝗖𝗘𝗦𝗦 𝗘𝗫𝗣𝗜𝗥𝗘𝗦:
 {expiry}
 """
 
@@ -2367,18 +2368,20 @@ def start(m):
     bot.send_message(
         m.chat.id,
 """
-⚜️ 𝑾𝑬𝑳𝑪𝑶𝑴𝑬 𝑻𝑶 𝑽𝑨𝑳𝑼𝑬𝑯𝑼𝑵𝑻𝑬𝑹 𝑬𝑳𝑰𝑻𝑬
+⚜️ 𝑾𝑬𝑳𝑪𝑶𝑴𝑬 𝑻𝑶 𝑽𝑨𝑳𝑼𝑬𝑯𝑼𝑵𝑻𝑬𝑹
 
-You are now inside the 𝑬𝑳𝑰𝑻𝑬 𝑩𝑬𝑻𝑻𝑰𝑵𝑮 𝑵𝑬𝑻𝑾𝑶𝑹𝑲.
+You are currently viewing the ValueHunter platform.
 
-Your membership unlocks access to premium value signals detected by the ValueHunter analytics system.
+Full access to the 𝑬𝑳𝑰𝑻𝑬 𝑩𝑬𝑻𝑻𝑰𝑵𝑮 𝑵𝑬𝑻𝑾𝑶𝑹𝑲 is restricted to members.
 
 ━━━━━━━━━━━━━━
 
 🕕 𝑶𝑭𝑭𝑰𝑪𝑰𝑨𝑳 𝑺𝑰𝑮𝑵𝑨𝑳 𝑹𝑬𝑳𝑬𝑨𝑺𝑬  
-18:00 (Athens Time) 🇬🇷
+• 18:00 (Athens Time) 🇬🇷
 
-⚠️ Signals are shared only with Elite members to protect the betting edge.
+⚠️ Premium signals are distributed only to Elite members to protect the betting edge.
+
+🎖️ Activate membership to unlock the ValueHunter signal network.
 """,
         reply_markup=main_menu()
     )
@@ -2420,14 +2423,14 @@ The 𝑽𝑨𝑳𝑼𝑬𝑯𝑼𝑵𝑻𝑬𝑹 analytics engine scans hundreds
 📡 Sharp odds movement tracking  
 💰 Liquidity signals  
 
-Only the strongest value opportunities pass the model filters and reach Elite members.
+𝗢𝗡𝗟𝗬 𝗧𝗛𝗘 𝗦𝗧𝗥𝗢𝗡𝗚𝗘𝗦𝗧 𝗩𝗔𝗟𝗨𝗘 𝗢𝗣𝗣𝗢𝗥𝗧𝗨𝗡𝗜𝗧𝗜𝗘𝗦 𝗣𝗔𝗦𝗦 𝗧𝗛𝗘 𝗠𝗢𝗗𝗘𝗟 𝗙𝗜𝗟𝗧𝗘𝗥𝗦 𝗔𝗡𝗗 𝗥𝗘𝗔𝗖𝗛 𝗘𝗟𝗜𝗧𝗘 𝗠𝗘𝗠𝗕𝗘𝗥𝗦.
 """
 
         keyboard = InlineKeyboardMarkup()
 
         keyboard.add(
             InlineKeyboardButton(
-                "🌐 Back to Dashboard",
+                "🌐 𝑩𝑨𝑪𝑲 𝑻𝑶 𝑫𝑨𝑺𝑯𝑩𝑶𝑨𝑹𝑫",
                 callback_data="vip_dashboard"
             )
         )
@@ -2447,7 +2450,7 @@ Only the strongest value opportunities pass the model filters and reach Elite me
 
 The 𝑽𝑨𝑳𝑼𝑬𝑯𝑼𝑵𝑻𝑬𝑹 system focuses on long-term profitable betting.
 
-Recommended staking model:
+𝗥𝗘𝗖𝗢𝗠𝗠𝗘𝗡𝗗𝗘𝗗 𝗦𝗧𝗔𝗞𝗜𝗡𝗚 𝗠𝗢𝗗𝗘𝗟:
 
 💰 𝟏–𝟑% 𝑩𝑨𝑵𝑲𝑹𝑶𝑳𝑳 𝑹𝑰𝑺𝑲 𝑷𝑬𝑹 𝑺𝑰𝑮𝑵𝑨𝑳  
 📊 𝟏–𝟑 𝑷𝑹𝑬𝑴𝑰𝑼𝑴 𝑽𝑨𝑳𝑼𝑬 𝑩𝑬𝑻𝑺 𝑷𝑬𝑹 𝑫𝑨𝒀
@@ -2458,7 +2461,7 @@ Consistent discipline allows members to replicate the same bankroll growth curve
         keyboard = InlineKeyboardMarkup()
         keyboard.add(
             InlineKeyboardButton(
-                "🌐 Back to Dashboard",
+                "🌐 𝑩𝑨𝑪𝑲 𝑻𝑶 𝑫𝑨𝑺𝑯𝑩𝑶𝑨𝑹𝑫",
                 callback_data="vip_dashboard"
             )
         )
@@ -2490,7 +2493,7 @@ The 𝑽𝑨𝑳𝑼𝑬𝑯𝑼𝑵𝑻𝑬𝑹 system focuses on identifying b
 
         keyboard.add(
             InlineKeyboardButton(
-                "🌐 Back to Dashboard",
+                "🌐 𝑩𝑨𝑪𝑲 𝑻𝑶 𝑫𝑨𝑺𝑯𝑩𝑶𝑨𝑹𝑫",
                 callback_data="vip_dashboard"
             )
         )
@@ -2572,7 +2575,7 @@ Elite members are already positioned on today's value opportunities.
 
         keyboard.add(
             InlineKeyboardButton(
-                "🌐 Back to VIP Menu",
+                "🎖️ 𝑩𝑨𝑪𝑲 𝑻𝑶 𝑽𝑰𝑷 𝑴𝑬𝑵𝑼",
                 callback_data="vip_menu"
             )
         )
@@ -2602,7 +2605,7 @@ Elite members are already positioned on today's value opportunities.
         keyboard = InlineKeyboardMarkup()
         keyboard.add(
             InlineKeyboardButton(
-                "🌐 Back to VIP Menu",
+                "🎖️ 𝑩𝑨𝑪𝑲 𝑻𝑶 𝑽𝑰𝑷 𝑴𝑬𝑵𝑼",
                 callback_data="vip_menu"
             )
         )
@@ -2622,7 +2625,7 @@ Elite members are already positioned on today's value opportunities.
         keyboard = InlineKeyboardMarkup()
         keyboard.add(
             InlineKeyboardButton(
-                "🌐 Back to VIP Menu",
+                "🎖️ 𝑩𝑨𝑪𝑲 𝑻𝑶 𝑽𝑰𝑷 𝑴𝑬𝑵𝑼",
                 callback_data="vip_menu"
             )
         )
@@ -2642,7 +2645,7 @@ Elite members are already positioned on today's value opportunities.
         keyboard = InlineKeyboardMarkup()
         keyboard.add(
             InlineKeyboardButton(
-                "🌐 Back to VIP Menu",
+                "🎖️ 𝑩𝑨𝑪𝑲 𝑻𝑶 𝑽𝑰𝑷 𝑴𝑬𝑵𝑼",
                 callback_data="vip_menu"
             )
         )
@@ -3024,7 +3027,7 @@ def broadcast(m):
         return
 
     text = """
-🔥 MARKET ACTIVITY DETECTED
+🔥 𝑴𝑨𝑹𝑲𝑬𝑻 𝑨𝑪𝑻𝑰𝑽𝑰𝑻𝒀 𝑫𝑬𝑻𝑬𝑪𝑻𝑬𝑫
 
 Our ValueHunter analytics engine has detected **unusual betting activity** in today's football markets.
 
