@@ -1897,37 +1897,36 @@ def send_signals():
             users = get_all_users()
 
             text = f"""
-            👑 𝑬𝑳𝑰𝑻𝑬 𝑵𝑬𝑻𝑾𝑶𝑹𝑲
+        👑 𝑬𝑳𝑰𝑻𝑬 𝑵𝑬𝑻𝑾𝑶𝑹𝑲
 
-            {members} members preparing today's bets.
+        {members} members preparing today's bets.
 
-            ⏳ Signal release in
-            {countdown}
+        ⏳ Signal release in
+        {countdown}
 
-            ⚜️ Elite members are already preparing their positions.
+        ⚜️ Elite members are already preparing their positions.
 
-            🔐 Unlock access before the signals are released.
-            """
+        🔐 Unlock access before the signals are released.
+        """
+            keyboard = InlineKeyboardMarkup()
 
-                keyboard = InlineKeyboardMarkup()
-
-                keyboard.add(
-                    InlineKeyboardButton(
-                        "⚜️ 𝑼𝑵𝑳𝑶𝑪𝑲 𝑽𝑰𝑷 𝑺𝑰𝑮𝑵𝑨𝑳𝑺",
-                        callback_data="elite"
-                     )
+            keyboard.add(
+                InlineKeyboardButton(
+                    "⚜️ 𝑼𝑵𝑳𝑶𝑪𝑲 𝑽𝑰𝑷 𝑺𝑰𝑮𝑵𝑨𝑳𝑺",
+                    callback_data="elite"
                 )
+            )
 
-                for uid in users:
+            for uid in users:
 
-                    if is_vip(uid):
-                        continue
+                if is_vip(uid):
+                    continue
 
-                    try:
-                        bot.send_message(uid,text,reply_markup=keyboard)
-                        time.sleep(0.05)
-                    except:
-                        pass
+                try:
+                    bot.send_message(uid,text,reply_markup=keyboard)
+                    time.sleep(0.05)
+                except:
+                    pass
             
         # ---------- FOMO MESSAGE 17:45 ----------
 
