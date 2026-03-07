@@ -364,8 +364,18 @@ alert_cache_time = 0
 # ---------- IMPLIED PROBABILITY ----------
 
 def implied_probability(odds):
-    return 1/odds
 
+    if odds <= 0:
+        return 0
+
+    return 1 / odds
+    
+# ---------- TRUE MARKET PROBABILITY ----------
+
+def true_probability(prob):
+
+    # remove bookmaker margin
+    return prob / (1 + prob)
 
 # ---------- MATCH SCANNER ----------
 
@@ -373,46 +383,68 @@ def scan_matches():
 
     global fixtures_cache, fixtures_cache_time
 
+    # ---------- 1 CACHE SYSTEM ----------
     if time.time() - fixtures_cache_time < 1800:
         return fixtures_cache
 
     fixtures = []
 
-        today = datetime.utcnow().date()
-        tomorrow = today + timedelta(days=1)
+    # ---------- 2 SCAN 3 DAYS ----------
+    today = datetime.utcnow().date()
+    future = today + timedelta(days=3)
 
-        url = f"https://v3.football.api-sports.io/fixtures?from={today}&to={tomorrow}"
-        
-        headers = {"x-apisports-key": FOOTBALL_API_KEY}
+    url = f"https://v3.football.api-sports.io/fixtures?from={today}&to={future}"
 
-        try:
-            r = requests.get(url, headers=headers).json()
-            time.sleep(0.1)
-        except:
+    headers = {"x-apisports-key": FOOTBALL_API_KEY}
+
+    try:
+        r = requests.get(url, headers=headers).json()
+        time.sleep(0.1)
+    except:
+        return []
+
+    for m in r.get("response", []):
+
+        # ---------- 3 LEAGUE FILTER ----------
+        league_id = m["league"]["id"]
+
+        if league_id not in GOOD_LEAGUES:
             continue
 
-        for m in r.get("response", []):
+        # ---------- 4 STATUS FILTER ----------
+        status = m["fixture"]["status"]["short"]
 
-            match_time = m["fixture"]["timestamp"]
-            now = int(time.time())
+        if status not in ["NS"]:
+            continue
 
-            if not (7200 <= match_time-now <= 259200):
-                continue
+        match_time = m["fixture"]["timestamp"]
+        now = int(time.time())
 
-            fixtures.append({
-                "fixture_id": m["fixture"]["id"],
-                "home": m["teams"]["home"]["name"],
-                "away": m["teams"]["away"]["name"],
-                "home_id": m["teams"]["home"]["id"],
-                "away_id": m["teams"]["away"]["id"],
-                "league_id": m["league"]["id"]
-            })
+        # ---------- 5 TIME WINDOW ----------
+        if not (7200 <= match_time-now <= 259200):
+            continue
 
+        fixtures.append({
+
+            "fixture_id": m["fixture"]["id"],
+            "home": m["teams"]["home"]["name"],
+            "away": m["teams"]["away"]["name"],
+            "home_id": m["teams"]["home"]["id"],
+            "away_id": m["teams"]["away"]["id"],
+            "league_id": league_id,
+
+            # ---------- 6 EXTRA DATA ----------
+            "league_name": m["league"]["name"],
+            "country": m["league"]["country"],
+            "timestamp": match_time
+
+        })
+
+    # ---------- 7 CACHE SAVE ----------
     fixtures_cache = fixtures
     fixtures_cache_time = time.time()
 
     return fixtures
-
 
 # ---------- TEAM STATS ----------
 
@@ -1047,8 +1079,18 @@ def get_value_bets():
             f["league_id"]
         )
         
+        # ---------- TEAM BALANCE FILTER ----------
+
+        if abs(home_xg - away_xg) > 2.5:
+            continue
+        
         xg_diff = abs(home_xg - away_xg)
         total_xg = home_xg + away_xg
+        
+        # ---------- TEMPO FILTER ----------
+
+        if total_xg < 1.7 or total_xg > 4.3:
+            continue
 
         if not model_sanity_filter(home_xg, away_xg):
             continue
@@ -1132,6 +1174,11 @@ def get_value_bets():
             )
 
         for market, prob, odds_value, line in markets:
+            
+            # ---------- ODDS RANGE FILTER ----------
+
+            if odds_value < 1.55 or odds_value > 3.80:
+                continue
 
             implied = implied_probability(odds_value)
 
@@ -1164,7 +1211,12 @@ def get_value_bets():
                 prob,
                 odds_value
             )
+            
+            # ---------- PROBABILITY STABILITY FILTER ----------
 
+            if prob > 0.80:
+                continue
+                
             if edge < 0.035 or prob < 0.54:
                 continue
 
