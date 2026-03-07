@@ -2397,6 +2397,18 @@ Elite members are already positioned on today's value opportunities.
 # ---------- PERFORMANCE ----------
 elif c.data == "vip_performance":
 
+    text = f"""
+📈 VALUEHUNTER PERFORMANCE
+
+{performance()}
+
+━━━━━━━━━━━━━━
+
+📅 Monthly overview
+
+{monthly_report()}
+"""
+
     keyboard = InlineKeyboardMarkup()
     keyboard.add(
         InlineKeyboardButton(
@@ -2409,19 +2421,6 @@ elif c.data == "vip_performance":
         text,
         c.message.chat.id,
         c.message.message_id,
-        reply_markup=keyboard
-    )
-        f"""
-📈 VALUEHUNTER PERFORMANCE
-
-{performance()}
-
-━━━━━━━━━━━━━━
-
-📅 Monthly overview
-
-{monthly_report()}
-""",
         reply_markup=keyboard
     )
 
