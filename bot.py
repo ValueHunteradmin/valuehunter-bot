@@ -2519,6 +2519,226 @@ Signals are released daily at 18:00.
             reply_markup=m
         )
         
+    # ================= BASIC =================
+
+    elif c.data == "buy_basic":
+
+        link = create_payment(50, c.message.chat.id)
+
+        keyboard = InlineKeyboardMarkup()
+
+        keyboard.add(
+            InlineKeyboardButton(
+                "💳 Pay with Card / Crypto",
+                url=link
+            )
+        )
+
+        keyboard.add(
+            InlineKeyboardButton(
+                "⬅️ Back to plans",
+                callback_data="elite"
+            )
+        )
+
+        bot.send_message(
+            c.message.chat.id,
+"""
+🥉 BASIC ACCESS
+
+You are about to unlock VALUEHUNTER BASIC membership.
+
+• 1 Premium Value Bet per day  
+
+Signals released daily at 18:00.
+""",
+            reply_markup=keyboard
+        )
+
+
+    # ================= PRO =================
+
+    elif c.data == "buy_pro":
+
+        link = create_payment(100, c.message.chat.id)
+
+        keyboard = InlineKeyboardMarkup()
+
+        keyboard.add(
+            InlineKeyboardButton(
+                "💳 Pay with Card / Crypto",
+                url=link
+            )
+        )
+
+        keyboard.add(
+            InlineKeyboardButton(
+                "⬅️ Back to plans",
+                callback_data="elite"
+            )
+        )
+
+        bot.send_message(
+            c.message.chat.id,
+"""
+🥇 VALUEHUNTER PRO ACCESS
+
+• 3 Premium Value Bets daily  
+• Full access to model signals  
+
+Signals released daily at 18:00.
+""",
+            reply_markup=keyboard
+        )
+
+
+    # ================= DAY PASS =================
+
+    elif c.data == "buy_day":
+
+        link = create_payment(25, c.message.chat.id)
+
+        keyboard = InlineKeyboardMarkup()
+
+        keyboard.add(
+            InlineKeyboardButton(
+                "💳 Pay with Card / Crypto",
+                url=link
+            )
+        )
+
+        keyboard.add(
+            InlineKeyboardButton(
+                "⬅️ Back to plans",
+                callback_data="elite"
+            )
+        )
+
+        bot.send_message(
+            c.message.chat.id,
+"""
+⚡ VALUEHUNTER DAY PASS
+
+• 24 hour PRO access  
+• Up to 3 premium signals today  
+
+Signals released at 18:00.
+""",
+            reply_markup=keyboard
+        )
+
+
+    # ================= SAMPLE =================
+
+    elif c.data == "sample":
+
+        bet = daily_sample(c.message.chat.id)
+
+        bot.send_message(
+            c.message.chat.id,
+            f"🎁 FREE SAMPLE\n\n{bet}"
+        )
+
+
+    # ================= ALERT =================
+
+    elif c.data == "alert":
+
+        keyboard = InlineKeyboardMarkup()
+
+        keyboard.add(
+            InlineKeyboardButton(
+                "🔐 Unlock VIP Access",
+                callback_data="elite"
+            )
+        )
+
+        keyboard.add(
+            InlineKeyboardButton(
+                "⬅️ Back to plans",
+                callback_data="back_menu"
+            )
+        )
+
+        bot.send_message(
+            c.message.chat.id,
+            market_alert(),
+            reply_markup=keyboard
+        )
+
+
+    # ================= PERFORMANCE =================
+
+    elif c.data == "perf":
+
+        keyboard = InlineKeyboardMarkup()
+
+        keyboard.add(
+            InlineKeyboardButton(
+                "🔐 Unlock VIP Access",
+                callback_data="elite"
+            )
+        )
+
+        keyboard.add(
+            InlineKeyboardButton(
+                "⬅️ Back to plans",
+                callback_data="back_menu"
+            )
+        )
+
+        bot.send_message(
+            c.message.chat.id,
+            f"""
+📊 VALUEHUNTER PERFORMANCE
+
+{performance()}
+
+📈 MONTHLY RESULTS
+
+{monthly_report()}
+""",
+            reply_markup=keyboard
+        )
+
+
+    # ================= SUPPORT =================
+
+    elif c.data == "support":
+
+        keyboard = InlineKeyboardMarkup()
+
+        keyboard.add(
+            InlineKeyboardButton(
+                "⬅️ Back to plans",
+                callback_data="back_menu"
+            )
+        )
+
+        bot.send_message(
+            c.message.chat.id,
+"""
+💬 VALUEHUNTER SUPPORT
+
+Contact:
+
+🔹 @MrMasterlegacy1
+""",
+            reply_markup=keyboard
+        )
+
+
+    # ================= BACK =================
+
+    elif c.data == "back_menu":
+
+        bot.edit_message_text(
+            "👁‍🗨 VALUEHUNTER MENU",
+            c.message.chat.id,
+            c.message.message_id,
+            reply_markup=main_menu()
+        )
+        
 @bot.message_handler(commands=["sendvip"])
 def sendvip(m):
 
