@@ -1884,6 +1884,51 @@ def send_signals():
 
             admin_sent_today = True
             
+        # ---------- PRE SIGNAL FOMO 17:30 ----------
+
+        if hour == 17 and minute == 30:
+
+            import random
+ 
+            members = random.randint(14,22)
+
+            countdown = signal_countdown()
+
+            users = get_all_users()
+
+            text = f"""
+            👑 𝑬𝑳𝑰𝑻𝑬 𝑵𝑬𝑻𝑾𝑶𝑹𝑲
+
+            {members} members preparing today's bets.
+
+            ⏳ Signal release in
+            {countdown}
+
+            ⚜️ Elite members are already preparing their positions.
+
+            🔐 Unlock access before the signals are released.
+            """
+
+                keyboard = InlineKeyboardMarkup()
+
+                keyboard.add(
+                    InlineKeyboardButton(
+                        "⚜️ 𝑼𝑵𝑳𝑶𝑪𝑲 𝑽𝑰𝑷 𝑺𝑰𝑮𝑵𝑨𝑳𝑺",
+                        callback_data="elite"
+                     )
+                )
+
+                for uid in users:
+
+                    if is_vip(uid):
+                        continue
+
+                    try:
+                        bot.send_message(uid,text,reply_markup=keyboard)
+                        time.sleep(0.05)
+                    except:
+                        pass
+            
         # ---------- FOMO MESSAGE 17:45 ----------
 
         if hour == 17 and minute == 45:
@@ -1947,7 +1992,7 @@ def send_signals():
                 else:
                     continue
 
-                text = "🔥 VIP SIGNALS\n\n" + "\n\n".join(picks)
+                text = "🎖️ VIP SIGNALS\n\n" + "\n\n".join(picks)
 
                 bot.send_message(uid, text)
                 time.sleep(0.05)
@@ -2102,7 +2147,7 @@ def vip_initialization_animation(user_id):
 
     message = bot.send_message(
         user_id,
-        "🌐 Initializing ValueHunter System...\n\n⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜"
+        "🎖️ Initializing ValueHunter System...\n\n⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜"
     )
 
     blocks = [
@@ -2213,7 +2258,7 @@ def vip_menu_keyboard():
 
     m.add(InlineKeyboardButton("🧑🏼‍💻 𝑽𝑰𝑷 𝑺𝑼𝑷𝑷𝑶𝑹𝑻", callback_data="vip_support"))
 
-    m.add(InlineKeyboardButton("🎗️ 𝑩𝑨𝑪𝑲 𝑻𝑶 𝑫𝑨𝑺𝑯𝑩𝑶𝑨𝑹𝑫", callback_data="vip_dashboard"))
+    m.add(InlineKeyboardButton("◀ 𝑩𝑨𝑪𝑲 𝑻𝑶 𝑫𝑨𝑺𝑯𝑩𝑶𝑨𝑹𝑫", callback_data="vip_dashboard"))
 
     return m
     
@@ -2283,18 +2328,24 @@ def vip_support(user_id, message_id=None):
     text = """
 💬 𝑽𝑰𝑷 𝑺𝑼𝑷𝑷𝑶𝑹𝑻
 
-Need assistance with signals or membership access?
+Need assistance with signals, membership access or platform support?
 
 ━━━━━━━━━━━━━━
 
-📤 24/7 𝗖𝗢𝗡𝗧𝗔𝗖𝗧 𝗦𝗨𝗣𝗣𝗢𝗥𝗧:
+📡 𝟐𝟒/𝟕 𝗣𝗥𝗜𝗢𝗥𝗜𝗧𝗬 𝗦𝗨𝗣𝗣𝗢𝗥𝗧
+
+Elite members can contact the ValueHunter support desk anytime.
+
+━━━━━━━━━━━━━━
+
+📩 𝗖𝗢𝗡𝗧𝗔𝗖𝗧 𝗦𝗨𝗣𝗣𝗢𝗥𝗧
 
 @MrMasterlegacy1
 """
 
     keyboard = InlineKeyboardMarkup()
 
-    keyboard.add(InlineKeyboardButton("🌐 Back to VIP Menu", callback_data="vip_menu"))
+    keyboard.add(InlineKeyboardButton("◀ Back to VIP Menu", callback_data="vip_menu"))
 
     if message_id:
         bot.edit_message_text(
@@ -2335,7 +2386,7 @@ def vip_status(user_id, message_id=None):
 
     keyboard = InlineKeyboardMarkup()
 
-    keyboard.add(InlineKeyboardButton("🌐 Back to VIP Menu", callback_data="vip_menu"))
+    keyboard.add(InlineKeyboardButton("◀ Back to VIP Menu", callback_data="vip_menu"))
 
     if message_id:
         bot.edit_message_text(
