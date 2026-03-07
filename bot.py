@@ -319,7 +319,14 @@ GOOD_LEAGUES = {
 203,  # Super Lig
 2,    # Champions League
 3,    # Europa League
-848   # Conference League
+848,  # Conference League
+
+144,  # Belgium
+113,  # Sweden
+71,   # Scotland
+218,  # Austria
+119,  # Norway
+106,  # Poland
 }
 
 league_strength = {
@@ -330,7 +337,13 @@ league_strength = {
 61:0.97,
 88:1.02,
 94:0.98,
-203:0.96
+203:0.96,
+144:0.99,  # Belgium
+113:1.02,  # Sweden
+71:0.98,   # Scotland
+218:1.01,  # Austria
+119:1.03,  # Norway
+106:0.97   # Poland
 }
 
 odds_history={}
@@ -365,9 +378,11 @@ def scan_matches():
 
     fixtures = []
 
-    for page in range(1,6):
+        today = datetime.utcnow().date()
+        tomorrow = today + timedelta(days=1)
 
-        url = f"https://v3.football.api-sports.io/fixtures?next=100&page={page}"
+        url = f"https://v3.football.api-sports.io/fixtures?from={today}&to={tomorrow}"
+        
         headers = {"x-apisports-key": FOOTBALL_API_KEY}
 
         try:
@@ -524,18 +539,19 @@ def model_sanity_filter(home_xg, away_xg):
     total_xg = home_xg + away_xg
 
     # πολύ χαμηλό tempo παιχνίδι
-    if total_xg < 1.8:
+    if total_xg < 1.6:
         return False
 
     # πολύ υψηλό tempo (unstable poisson)
-    if total_xg > 4.2:
+    if total_xg > 4.8:
         return False
 
     # πολύ μονόπλευρο παιχνίδι
-    if abs(home_xg - away_xg) > 2.2:
+    if abs(home_xg - away_xg) > 2.5:
         return False
 
     return True
+    
 # ---------- MARKET PROBABILITIES ----------
 
 def over25_probability(matrix):
@@ -1226,7 +1242,7 @@ def get_value_bets():
             if prob >= 0.62:
                 confidence += 3
 
-            if ev <= 0.05:
+            if ev <= 0.035:
                 continue
 
             pick = market
@@ -1391,6 +1407,106 @@ Next free bet available in {hours} hours.
     db.commit()
 
     return bets[0]
+    
+def send_sample_with_scan(user_id):
+
+    now = int(time.time())
+
+    row = cursor.execute(
+        "SELECT last_time FROM free_sample WHERE user_id=?",
+        (user_id,)
+    ).fetchone()
+
+    # ---------- 48H LIMIT ----------
+    if row:
+
+        last_time = row[0]
+
+        if now - last_time < 172800:
+
+            remaining = 172800 - (now - last_time)
+
+            hours = remaining // 3600
+
+            bot.send_message(
+                user_id,
+f"""
+⏳ FREE SAMPLE ALREADY USED
+
+Next free bet available in **{hours} hours**.
+"""
+            )
+            return
+
+
+    # ---------- SCANNING MESSAGE ----------
+    msg = bot.send_message(
+        user_id,
+"""
+🔎 VALUEHUNTER SCANNING
+
+Analyzing football markets...
+
+Scanning leagues ███░░░░░░
+
+📡 Data feeds connected  
+🧠 Probability models running  
+📊 Detecting bookmaker value
+"""
+    )
+
+    time.sleep(2)
+
+    # ---------- GET BET ----------
+    bets = get_value_bets()
+
+    if not bets:
+
+        bot.edit_message_text(
+"""
+⚠️ The system is still finalizing today's analysis.
+
+Please try again in a few minutes.
+""",
+            user_id,
+            msg.message_id
+        )
+        return
+
+    bet = bets[0]   # SUPER SAFE BET
+
+    cursor.execute(
+        "INSERT OR REPLACE INTO free_sample VALUES (?,?)",
+        (user_id, now)
+    )
+
+    db.commit()
+
+    keyboard = InlineKeyboardMarkup()
+
+    keyboard.add(
+        InlineKeyboardButton(
+            "🔥 Unlock VIP Access",
+            callback_data="elite"
+        )
+    )
+
+    bot.edit_message_text(
+f"""
+🎁 VALUEHUNTER FREE SAMPLE
+
+{bet}
+
+━━━━━━━━━━━━━━
+
+This opportunity was detected during today's model analysis.
+
+Elite members receive the **full signal card daily at 18:00**.
+""",
+        user_id,
+        msg.message_id,
+        reply_markup=keyboard
+    )
 
 # ================= MARKET ALERT =================
 
@@ -2649,13 +2765,10 @@ Signals released at 18:00.
 
     elif c.data == "sample":
 
-        bet = daily_sample(c.message.chat.id)
-
-        bot.send_message(
-            c.message.chat.id,
-            f"🎁 FREE SAMPLE\n\n{bet}"
-        )
-
+        threading.Thread(
+            target=send_sample_with_scan,
+            args=(c.message.chat.id,)
+        ).start()
 
     # ================= ALERT =================
 
