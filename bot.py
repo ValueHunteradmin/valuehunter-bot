@@ -274,6 +274,11 @@ Welcome to VALUEHUNTER ELITE.
     )
 
     db.commit()
+    
+    threading.Thread(
+        target=vip_initialization_animation,
+        args=(user_id,)
+    ).start()
      
     return "ok"
     
@@ -1882,10 +1887,273 @@ def clean_sent_bets():
 
     db.commit()
     
+def vip_initialization_animation(user_id):
+
+    message = bot.send_message(
+        user_id,
+        "⚙️ Initializing ValueHunter System...\n\n⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜"
+    )
+
+    blocks = [
+        "🟩⬜⬜⬜⬜⬜⬜⬜⬜⬜",
+        "🟩🟩⬜⬜⬜⬜⬜⬜⬜⬜",
+        "🟩🟩🟩⬜⬜⬜⬜⬜⬜⬜",
+        "🟩🟩🟩🟩⬜⬜⬜⬜⬜⬜",
+        "🟩🟩🟩🟩🟩⬜⬜⬜⬜⬜",
+        "🟩🟩🟩🟩🟩🟩⬜⬜⬜⬜",
+        "🟩🟩🟩🟩🟩🟩🟩⬜⬜⬜",
+        "🟩🟩🟩🟩🟩🟩🟩🟩⬜⬜",
+        "🟩🟩🟩🟩🟩🟩🟩🟩🟩⬜",
+        "🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩"
+    ]
+
+    for bar in blocks:
+
+        time.sleep(0.4)
+
+        try:
+            bot.edit_message_text(
+                f"⚙️ Initializing ValueHunter System...\n\n{bar}",
+                user_id,
+                message.message_id
+            )
+        except:
+            pass
+
+    time.sleep(0.3)
+
+    send_vip_dashboard(user_id)
+    
+def vip_dashboard_keyboard():
+
+    m = InlineKeyboardMarkup()
+
+    m.add(InlineKeyboardButton("⚜️ VIP MENU", callback_data="vip_menu"))
+
+    m.add(InlineKeyboardButton("📡 Model Insights", callback_data="model_insights"))
+
+    m.add(InlineKeyboardButton("🧠 Betting Strategy", callback_data="betting_strategy"))
+
+    m.add(InlineKeyboardButton("💸 VIP Results Feed", callback_data="vip_results"))
+
+    return m
+    
+def send_vip_dashboard(user_id, message_id=None):
+
+    text = """
+👑 𝑽𝑨𝑳𝑼𝑬𝑯𝑼𝑵𝑻𝑬𝑹 𝑬𝑳𝑰𝑻𝑬 𝑵𝑬𝑻𝑾𝑶𝑹𝑲
+
+Welcome inside the private ValueHunter intelligence system.
+
+You now have access to a restricted betting analytics network designed to detect bookmaker pricing errors and high-value opportunities across global football markets.
+
+━━━━━━━━━━━━━━
+
+🧠 Advanced Expected Goals Models  
+📊 Market Inefficiency Detection  
+📡 Sharp Money Monitoring  
+💎 Liquidity Intelligence Signals  
+
+━━━━━━━━━━━━━━
+
+📡 System Status
+
+🟢 Data feeds active  
+🟢 Market monitoring active  
+🟢 Model scanning global leagues  
+
+━━━━━━━━━━━━━━
+
+⏳ Next signal release  
+🕕 18:00 (Europe/Athens)
+
+⚠️ Signals inside this network are shared with a limited number of Elite members to protect the betting edge.
+"""
+
+    if message_id:
+        bot.edit_message_text(
+            text,
+            user_id,
+            message_id,
+            reply_markup=vip_dashboard_keyboard()
+        )
+    else:
+        bot.send_message(
+            user_id,
+            text,
+            reply_markup=vip_dashboard_keyboard()
+        )
+    
+def vip_menu_keyboard():
+
+    m = InlineKeyboardMarkup()
+
+    m.add(InlineKeyboardButton("📊 Today's Signals", callback_data="vip_signals"))
+
+    m.add(InlineKeyboardButton("📈 Model Performance", callback_data="vip_performance"))
+
+    m.add(InlineKeyboardButton("💰 Bankroll Tracker", callback_data="vip_bankroll"))
+
+    m.add(InlineKeyboardButton("⚡ Early Market Alerts", callback_data="vip_alerts"))
+
+    m.add(InlineKeyboardButton("📅 VIP Status", callback_data="vip_status"))
+
+    m.add(InlineKeyboardButton("💬 VIP Support", callback_data="vip_support"))
+
+    m.add(InlineKeyboardButton("🌐 Back to Dashboard", callback_data="vip_dashboard"))
+
+    return m
+    
+def send_vip_menu(user_id, message_id=None):
+
+    now = datetime.now(pytz.timezone("Europe/Athens")).hour
+
+    if now < 18:
+
+        text = """
+⚜️ 𝑽𝑰𝑷 𝑪𝑶𝑵𝑻𝑹𝑶𝑳 𝑷𝑨𝑵𝑬𝑳
+
+The ValueHunter analytics engine is currently scanning today's football markets.
+
+📡 Market data streaming  
+🧠 Models calculating probabilities  
+💎 Value opportunities being filtered  
+
+⏳ Official signal release:
+
+🕕 18:00
+
+Elite members are preparing their positions.
+"""
+
+    else:
+
+        text = """
+⚜️ 𝑽𝑰𝑷 𝑺𝑰𝑮𝑵𝑨𝑳 𝑪𝑬𝑵𝑻𝑬𝑹
+
+Today's ValueHunter signals have been released to the Elite network.
+
+📊 Model probabilities calculated  
+📡 Market pressure analysed  
+💎 Premium value opportunities identified  
+
+Elite members are already placing today's bets.
+"""
+
+    if message_id:
+        bot.edit_message_text(
+            text,
+            user_id,
+            message_id,
+            reply_markup=vip_menu_keyboard()
+        )
+    else:
+        bot.send_message(
+            user_id,
+            text,
+            reply_markup=vip_menu_keyboard()
+        )
+    
+def vip_support(user_id, message_id=None):
+
+    text = """
+💬 𝑽𝑰𝑷 𝑺𝑼𝑷𝑷𝑶𝑹𝑻
+
+Need assistance with signals or membership access?
+
+━━━━━━━━━━━━━━
+
+📩 Contact support:
+
+@MrMasterlegacy1
+"""
+
+    keyboard = InlineKeyboardMarkup()
+
+    keyboard.add(InlineKeyboardButton("🌐 Back to VIP Menu", callback_data="vip_menu"))
+
+    if message_id:
+        bot.edit_message_text(
+            text,
+            user_id,
+            message_id,
+            reply_markup=keyboard
+        )
+    else:
+        bot.send_message(user_id, text, reply_markup=keyboard)
+    
+def vip_status(user_id, message_id=None):
+
+    row = cursor.execute(
+        "SELECT plan,expire FROM vip_users WHERE user_id=?",
+        (user_id,)
+    ).fetchone()
+
+    if not row:
+        return
+
+    plan, expire = row
+
+    expiry = datetime.fromtimestamp(expire).strftime("%d %B %Y")
+
+    text = f"""
+📅 𝑬𝑳𝑰𝑻𝑬 𝑴𝑬𝑴𝑩𝑬𝑹𝑺𝑯𝑰𝑷
+
+👤 User ID: {user_id}
+
+💎 Plan: {plan}
+
+📊 Signals per day: up to 3
+
+⏳ Access expires:
+{expiry}
+"""
+
+    keyboard = InlineKeyboardMarkup()
+
+    keyboard.add(InlineKeyboardButton("🌐 Back to VIP Menu", callback_data="vip_menu"))
+
+    if message_id:
+        bot.edit_message_text(
+            text,
+            user_id,
+            message_id,
+            reply_markup=keyboard
+        )
+    else:
+        bot.send_message(user_id, text, reply_markup=keyboard)
+        
+def signal_countdown():
+
+    tz = pytz.timezone("Europe/Athens")
+
+    now = datetime.now(tz)
+
+    target = now.replace(hour=18, minute=0, second=0, microsecond=0)
+
+    if now >= target:
+        return "00:00:00"
+
+    diff = target - now
+
+    total_seconds = int(diff.total_seconds())
+
+    hours = total_seconds // 3600
+    minutes = (total_seconds % 3600) // 60
+    seconds = total_seconds % 60
+
+    return f"{hours:02}:{minutes:02}:{seconds:02}"
+    
 # ================= TELEGRAM =================
 
 @bot.message_handler(commands=["start"])
 def start(m):
+    
+    user_id = m.chat.id
+
+    if is_vip(user_id):
+        send_vip_dashboard(user_id)
+        return
 
     bot.send_message(
         m.chat.id,
@@ -1933,7 +2201,287 @@ you are currently inside a **temporary entry window**.
 def callbacks(c):
 
     bot.answer_callback_query(c.id)
+    
+# ---------- VIP DASHBOARD ----------
+elif c.data == "vip_dashboard":
 
+    send_vip_dashboard(
+        c.message.chat.id,
+        c.message.message_id
+    )
+
+# ---------- VIP MENU ----------
+elif c.data == "vip_menu":
+
+    send_vip_menu(
+        c.message.chat.id,
+        c.message.message_id
+    )
+
+# ---------- MODEL INSIGHTS ----------
+elif c.data == "model_insights":
+
+    keyboard = InlineKeyboardMarkup()
+    keyboard.add(
+        InlineKeyboardButton(
+            "🌐 Back to Dashboard",
+            callback_data="vip_dashboard"
+        )
+    )
+
+    bot.edit_message_text(
+        text,
+        c.message.chat.id,
+        c.message.message_id,
+        reply_markup=keyboard
+    )
+        """
+📡 MODEL INSIGHTS
+
+The ValueHunter analytics engine scans hundreds of football matches daily to detect bookmaker pricing inefficiencies.
+
+⚙️ Expected Goals modelling  
+📉 Market price inefficiencies  
+📡 Sharp odds movement tracking  
+💰 Liquidity signals  
+
+Only the strongest value opportunities pass the model filters and reach Elite members.
+""",
+        reply_markup=keyboard
+    )
+
+# ---------- BETTING STRATEGY ----------
+elif c.data == "betting_strategy":
+
+    keyboard = InlineKeyboardMarkup()
+    keyboard.add(
+        InlineKeyboardButton(
+            "🌐 Back to Dashboard",
+            callback_data="vip_dashboard"
+        )
+    )
+
+    bot.edit_message_text(
+        text,
+        c.message.chat.id,
+        c.message.message_id,
+        reply_markup=keyboard
+    )
+        """
+🧠 BETTING STRATEGY
+
+The ValueHunter system focuses on long-term profitable betting.
+
+Recommended staking model:
+
+💰 1-3% bankroll per signal  
+📊 1-3 value bets daily  
+
+Consistent discipline allows members to replicate the same bankroll growth curve as the model.
+""",
+        reply_markup=keyboard
+    )
+
+# ---------- RESULTS FEED ----------
+elif c.data == "vip_results":
+
+    keyboard = InlineKeyboardMarkup()
+    keyboard.add(
+        InlineKeyboardButton(
+            "🌐 Back to Dashboard",
+            callback_data="vip_dashboard"
+        )
+    )
+
+    bot.edit_message_text(
+        text,
+        c.message.chat.id,
+        c.message.message_id,
+        reply_markup=keyboard
+    )
+        """
+💸 VIP RESULTS FEED
+
+Recent signals from the ValueHunter network:
+
+✔ Over 2.5 — WIN  
+✔ BTTS — WIN  
+❌ Under 2.5 — LOSS  
+✔ Over 1.5 — WIN  
+
+The ValueHunter system focuses on identifying bookmaker pricing errors rather than predicting every match.
+""",
+        reply_markup=keyboard
+    )
+    
+# ---------- VIP SIGNALS ----------
+elif c.data == "vip_signals":
+
+    now = datetime.now(pytz.timezone("Europe/Athens")).hour
+
+    if now < 18:
+
+        countdown = signal_countdown()
+
+        import random
+
+        bars = [
+            "████░░░░░░",
+            "█████░░░░░",
+            "██████░░░░",
+            "███████░░░",
+            "████████░░",
+            "█████████░"
+        ]
+
+        scan_bar = random.choice(bars)
+
+        text = f"""
+📊 𝑻𝑶𝑫𝑨𝒀'𝑺 𝑺𝑰𝑮𝑵𝑨𝑳𝑺
+
+The ValueHunter analytics engine is currently scanning today's football markets.
+
+━━━━━━━━━━━━━━
+
+⏳ SIGNAL ENGINE STATUS
+
+Scanning markets {scan_bar}
+
+📡 Data feeds connected  
+🧠 Probability models calculating  
+💎 Value opportunities filtering  
+
+━━━━━━━━━━━━━━
+
+🕕 NEXT SIGNAL RELEASE  
+18:00 (Europe/Athens)
+
+⏱ Countdown
+{countdown}
+
+Elite members will receive today's signals as soon as the analysis is completed.
+"""
+
+    else:
+
+        text = """
+📊 𝑻𝑶𝑫𝑨𝒀'𝑺 𝑺𝑰𝑮𝑵𝑨𝑳𝑺
+
+Today's ValueHunter signals have already been distributed to the Elite network.
+
+━━━━━━━━━━━━━━
+
+📡 Market monitoring active  
+🧠 Models tracking closing line movement  
+💎 Results feed will update once matches finish.
+
+━━━━━━━━━━━━━━
+
+Elite members are already positioned on today's value opportunities.
+"""
+
+    keyboard = InlineKeyboardMarkup()
+
+    keyboard.add(
+        InlineKeyboardButton(
+            "🌐 Back to VIP Menu",
+            callback_data="vip_menu"
+        )
+    )
+
+    bot.edit_message_text(
+        text,
+        c.message.chat.id,
+        c.message.message_id,
+        reply_markup=keyboard
+    )
+    
+# ---------- PERFORMANCE ----------
+elif c.data == "vip_performance":
+
+    keyboard = InlineKeyboardMarkup()
+    keyboard.add(
+        InlineKeyboardButton(
+            "🌐 Back to VIP Menu",
+            callback_data="vip_menu"
+        )
+    )
+
+    bot.edit_message_text(
+        text,
+        c.message.chat.id,
+        c.message.message_id,
+        reply_markup=keyboard
+    )
+        f"""
+📈 VALUEHUNTER PERFORMANCE
+
+{performance()}
+
+━━━━━━━━━━━━━━
+
+📅 Monthly overview
+
+{monthly_report()}
+""",
+        reply_markup=keyboard
+    )
+
+# ---------- BANKROLL ----------
+elif c.data == "vip_bankroll":
+
+    text = bakroll_status()
+
+    keyboard = InlineKeyboardMarkup()
+    keyboard.add(
+        InlineKeyboardButton(
+            "🌐 Back to VIP Menu",
+            callback_data="vip_menu"
+        )
+    )
+
+    bot.edit_message_text(
+        c.message.chat.id,
+        c.message.message_id,
+        reply_markup=keyboard
+    )
+
+# ---------- ALERTS ----------
+elif c.data == "vip_alerts":
+    
+    text = market_alert()
+    
+    keyboard = InlineKeyboardMarkup()
+    keyboard.add(
+        InlineKeyboardButton(
+            "🌐 Back to VIP Menu",
+            callback_data="vip_menu"
+        )
+    )
+
+    bot.edit_message_text(
+        text,
+        c.message.chat.id,
+        c.message.message_id,
+        reply_markup=keyboard
+    )
+
+# ---------- VIP STATUS ----------
+elif c.data == "vip_status":
+
+    vip_status(
+        c.message.chat.id,
+        c.message.message_id
+    )
+
+# ---------- VIP SUPPORT ----------
+elif c.data == "vip_support":
+
+    vip_support(
+        c.message.chat.id,
+        c.message.message_id
+    )
+    
 # ================= ELITE PLANS =================
 
     if c.data == "elite":
