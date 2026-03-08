@@ -197,6 +197,7 @@ def main_menu():
     m.add(InlineKeyboardButton("⚡ 𝑴𝑨𝑹𝑲𝑬𝑻 𝑨𝑳𝑬𝑹𝑻", callback_data="alert"))
     m.add(InlineKeyboardButton("🫆 𝑷𝑬𝑹𝑭𝑶𝑹𝑴𝑨𝑵𝑪𝑬", callback_data="perf"))
     m.add(InlineKeyboardButton("👑 𝑹𝑬𝑭𝑬𝑹𝑹𝑨𝑳 𝑷𝑹𝑶𝑮𝑹𝑨𝑴", callback_data="referral"))
+    m.add(InlineKeyboardButton("❓ 𝑭𝑨𝑸", callback_data="faq"))
     m.add(InlineKeyboardButton("🧑🏼‍💻 𝑺𝑼𝑷𝑷𝑶𝑹𝑻", callback_data="support"))
 
     return m
@@ -2651,12 +2652,106 @@ def signal_timer():
 
     return label, countdown
     
+def startup_loading(chat_id):
+
+    msg = bot.send_message(
+        chat_id,
+"""
+Loading...
+
+█░░░░░░░░░░░░░░░
+━━━━━━━━━━━━━━
+
+⚜️ 𝑰𝒏𝒊𝒕𝒊𝒂𝒍𝒊𝒛𝒊𝒏𝒈 𝑽𝒂𝒍𝒖𝒆𝑯𝒖𝒏𝒕𝒆𝒓 𝑻𝒆𝒓𝒎𝒊𝒏𝒂𝒍...
+"""
+    )
+
+    time.sleep(1.2)
+
+    bot.edit_message_text(
+"""
+Loading...
+
+███░░░░░░░░░░░░░
+━━━━━━━━━━━━━━
+
+📡 𝑪𝒐𝒏𝒏𝒆𝒄𝒕𝒊𝒏𝒈 𝒕𝒐 𝒈𝒍𝒐𝒃𝒂𝒍 𝒇𝒐𝒐𝒕𝒃𝒂𝒍𝒍 𝒅𝒂𝒕𝒂 𝒇𝒆𝒆𝒅𝒔...
+""",
+        chat_id,
+        msg.message_id
+    )
+
+    time.sleep(1.2)
+
+    bot.edit_message_text(
+"""
+Loading...
+
+█████░░░░░░░░░░░
+━━━━━━━━━━━━━━
+
+🌐 𝑬𝒔𝒕𝒂𝒃𝒍𝒊𝒔𝒉𝒊𝒏𝒈 𝒔𝒆𝒄𝒖𝒓𝒆 𝒂𝒏𝒂𝒍𝒚𝒕𝒊𝒄𝒔 𝒏𝒆𝒕𝒘𝒐𝒓𝒌...
+""",
+        chat_id,
+        msg.message_id
+    )
+
+    time.sleep(1.2)
+
+    bot.edit_message_text(
+"""
+Loading...
+
+████████░░░░░░░░
+━━━━━━━━━━━━━━
+
+📊 𝑺𝒄𝒂𝒏𝒏𝒊𝒏𝒈 𝒃𝒐𝒐𝒌𝒎𝒂𝒌𝒆𝒓 𝒐𝒅𝒅𝒔 𝒇𝒆𝒆𝒅𝒔...
+""",
+        chat_id,
+        msg.message_id
+    )
+
+    time.sleep(1.2)
+
+    bot.edit_message_text(
+"""
+Loading...
+
+███████████░░░░░
+━━━━━━━━━━━━━━
+
+🧠 𝑳𝒐𝒂𝒅𝒊𝒏𝒈 𝒑𝒓𝒐𝒃𝒂𝒃𝒊𝒍𝒊𝒕𝒚 𝒎𝒐𝒅𝒆𝒍𝒔...
+""",
+        chat_id,
+        msg.message_id
+    )
+
+    time.sleep(1.2)
+
+    bot.edit_message_text(
+"""
+Loading...
+
+████████████████
+━━━━━━━━━━━━━━
+
+🚀 𝑽𝒂𝒍𝒖𝒆𝑯𝒖𝒏𝒕𝒆𝒓 𝒔𝒚𝒔𝒕𝒆𝒎 𝒓𝒆𝒂𝒅𝒚
+""",
+        chat_id,
+        msg.message_id
+    )
+
+    time.sleep(1)
+    
 # ================= TELEGRAM =================
 
 @bot.message_handler(commands=["start"])
 def start(m):
     
     user_id = m.chat.id
+    
+    if not is_vip(user_id):
+    startup_loading(user_id)
     
     parts = m.text.split()
 
@@ -2718,8 +2813,169 @@ reply_markup=main_menu()
 )
 
     start_conversion_funnel(m.chat.id)
+    
+def faq_menu(chat_id, message_id):
 
+    text = """
+❓ 𝑽𝑨𝑳𝑼𝑬𝑯𝑼𝑵𝑻𝑬𝑹 𝑭𝑨𝑸
 
+Welcome inside the ValueHunter intelligence system.
+
+What would you like to know?
+
+━━━━━━━━━━━━━━
+"""
+
+    keyboard = InlineKeyboardMarkup()
+
+    keyboard.add(
+        InlineKeyboardButton(
+            "🧠 How ValueHunter works",
+            callback_data="faq_system"
+        )
+    )
+
+    keyboard.add(
+        InlineKeyboardButton(
+            "📊 Why value betting wins",
+            callback_data="faq_value"
+        )
+    )
+
+    keyboard.add(
+        InlineKeyboardButton(
+            "💸 Referral program",
+            callback_data="faq_referral"
+        )
+    )
+
+    keyboard.add(
+        InlineKeyboardButton(
+            "⚜ Unlock Elite Access",
+            callback_data="elite"
+        )
+    )
+
+    keyboard.add(
+        InlineKeyboardButton(
+            "⬅ Back",
+            callback_data="back_menu"
+        )
+    )
+
+    bot.edit_message_text(
+        text,
+        chat_id,
+        message_id,
+        reply_markup=keyboard
+    )
+    
+def faq_system(chat_id, message_id):
+
+    text = """
+🧠 𝑯𝑶𝑾 𝑽𝑨𝑳𝑼𝑬𝑯𝑼𝑵𝑻𝑬𝑹 𝑾𝑶𝑹𝑲𝑺
+
+ValueHunter is a betting intelligence engine.
+
+The system scans hundreds of football matches daily to detect bookmaker pricing inefficiencies.
+
+Our analytics models track:
+
+⚙️ Expected Goals data  
+📉 Market price inefficiencies  
+📡 Sharp odds movement  
+💰 Liquidity signals  
+
+Only the **strongest value opportunities** pass the filters and reach Elite members.
+"""
+
+    keyboard = InlineKeyboardMarkup()
+
+    keyboard.add(
+        InlineKeyboardButton(
+            "➡ Next",
+            callback_data="faq_value"
+        )
+    )
+
+    keyboard.add(
+        InlineKeyboardButton(
+            "⬅ Back",
+            callback_data="faq"
+        )
+    )
+
+    bot.edit_message_text(text, chat_id, message_id, reply_markup=keyboard)
+    
+def faq_value(chat_id, message_id):
+
+    text = """
+📊 𝑾𝑯𝒀 𝑽𝑨𝑳𝑼𝑬 𝑩𝑬𝑻𝑻𝑰𝑵𝑮 𝑾𝑰𝑵𝑺
+
+Most bettors lose because they place bets after the market moves.
+
+Professional bettors place bets **before the odds adjust**.
+
+This is called **value betting**.
+
+Elite members receive signals before the market reacts.
+
+This is where long-term profit exists.
+"""
+
+    keyboard = InlineKeyboardMarkup()
+
+    keyboard.add(
+        InlineKeyboardButton(
+            "➡ Next",
+            callback_data="faq_referral"
+        )
+    )
+
+    keyboard.add(
+        InlineKeyboardButton(
+            "⬅ Back",
+            callback_data="faq_system"
+        )
+    )
+
+    bot.edit_message_text(text, chat_id, message_id, reply_markup=keyboard)
+    
+def faq_referral(chat_id, message_id):
+
+    text = """
+💸 𝑹𝑬𝑭𝑬𝑹𝑹𝑨𝑳 𝑷𝑹𝑶𝑮𝑹𝑨𝑴
+
+Invite users to the ValueHunter network.
+
+When someone joins using your referral link and purchases a membership:
+
+✔ Your referral score increases  
+✔ Your discount increases  
+
+💎 30 referrals unlock **50% PRO access**
+
+Top users inside the network are already earning free months through referrals.
+"""
+
+    keyboard = InlineKeyboardMarkup()
+
+    keyboard.add(
+        InlineKeyboardButton(
+            "⚜ Unlock Elite Access",
+            callback_data="elite"
+        )
+    )
+
+    keyboard.add(
+        InlineKeyboardButton(
+            "⬅ Back",
+            callback_data="faq_value"
+        )
+    )
+
+    bot.edit_message_text(text, chat_id, message_id, reply_markup=keyboard)
+    
 @bot.callback_query_handler(func=lambda c: True)
 def callbacks(c):
 
@@ -3295,7 +3551,34 @@ Our support team will respond as soon as possible.
 """,
             reply_markup=keyboard
         )
+        
+    elif c.data == "faq":
 
+        faq_menu(
+            c.message.chat.id,
+            c.message.message_id
+        )
+        
+    elif c.data == "faq_system":
+
+        faq_system(
+            c.message.chat.id,
+            c.message.message_id
+        )
+        
+    elif c.data == "faq_value":
+
+        faq_value(
+            c.message.chat.id,
+            c.message.message_id
+        )
+        
+    elif c.data == "faq_referral":
+
+    faq_referral(
+        c.message.chat.id,
+        c.message.message_id
+    )
 
     # ================= BACK =================
 
