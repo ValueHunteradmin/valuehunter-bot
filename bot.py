@@ -3141,7 +3141,7 @@ Top users inside the network are already earning free months through referrals.
 def callbacks(c):
 
     bot.answer_callback_query(c.elif c.data == "dev_sendvip":
-    sendvip(c.message)
+        sendvip(c.message)
 
     # ---------- VIP DASHBOARD ----------
     if c.data == "vip_dashboard":
