@@ -1431,11 +1431,6 @@ def get_value_bets():
                 odds_value
             ):
                 continue
-
-            pinnacle_signal = pinnacle_sharp_check(
-                prob,
-                odds_value
-            )
             
             # ---------- PROBABILITY STABILITY FILTER ----------
 
@@ -1447,25 +1442,8 @@ def get_value_bets():
                 
             ev = calculate_ev(prob, odds_value)
 
-            move = track_odds(
-                f["fixture_id"],
-                odds_value
-            )
-            
             # ---------- ODDS MOVEMENT FILTER ----------
-            if move < -0.15:
-                continue
-                
-            steam = detect_steam_move(
-                f["fixture_id"],
-                odds_value
-            )
-
-            clv = track_clv(
-                f["fixture_id"],
-                odds_value
-            )
-
+        
             stake = kelly_stake(
                 prob,
                 odds_value
@@ -1474,44 +1452,17 @@ def get_value_bets():
             if stake > 0.06:
                 continue
 
-            timing_signal = market_timing_engine(
-                prob,
-                odds_value
-            )
-            
-            if timing_signal:
-                early_text = "\n⚡ Early value detected\nOdds may drop soon\n"
-            else:
-                early_text = ""
-
-            steam_prediction = predict_steam(
-                prob,
-                odds_value
-            )
-
             confidence = (
                 (prob * 50) +
                 (edge * 200) +
                 (ev * 100)
             )
                 
-            if pinnacle_signal:
-                confidence += 6
-
-            if steam:
-                confidence += 10
-
-            if steam_prediction:
-                confidence += 7
-
             if timing_signal:
                 confidence += 8
                 
             # EARLY VALUE SIGNAL
             if timing_signal and prob > 0.63:
-                confidence += 5
-
-            if clv > 0.10:
                 confidence += 5
                 
             # ideal odds range bonus
