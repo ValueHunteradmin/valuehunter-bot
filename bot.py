@@ -2242,11 +2242,7 @@ Invite new members to the ValueHunter platform and unlock exclusive rewards.
 Share your link and earn rewards when members activate a subscription.
 """
 
-    share_text = quote("""🔥 I just joined the ValueHunter AI betting system.
-
-Daily VIP signals at 18:00 🇬🇷
-
-Join here:""")
+    share_text = "🔥 I just joined the ValueHunter AI betting system.\n\nDaily VIP signals at 18:00 🇬🇷\n\nJoin here:"
     
     keyboard = InlineKeyboardMarkup()
 
