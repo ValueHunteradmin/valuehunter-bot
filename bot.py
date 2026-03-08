@@ -1675,19 +1675,17 @@ def start_conversion_funnel(user_id):
 
 The 𝑽𝑨𝑳𝑼𝑬𝑯𝑼𝑵𝑻𝑬𝑹 analytics engine has already started scanning today's football markets.
 
-Several -high probability value opportunities- have already been detected by the system.
+Several high probability value opportunities have already been detected by the system.
 
-Elite members will receive the **final signals before the market reacts**.
+Elite members will receive the final signals before the market reacts.
 
 ━━━━━━━━━━━━━━
 
 ⚠️ 𝑳𝑰𝑴𝑰𝑻𝑬𝑫 𝑬𝑵𝑻𝑹𝒀 𝑾𝑰𝑵𝑫𝑶𝑾
 
-Access to the 𝑽𝑨𝑳𝑼𝑬𝑯𝑼𝑵𝑻𝑬𝑹 network is currently open, but may close once today's signals are released.
+Access to the ValueHunter network is currently open but may close once today's signals are released.
 
 Secure your position before the market moves.
-
-▼ 𝑼𝑺𝑬 𝑻𝑯𝑬 𝑴𝑬𝑵𝑼 𝑩𝑬𝑳𝑶𝑾 𝑻𝑶 𝑼𝑵𝑳𝑶𝑪𝑲 𝑨𝑪𝑪𝑬𝑺𝑺.
 """,
                 reply_markup=keyboard
             )
@@ -1712,22 +1710,20 @@ Secure your position before the market moves.
 """
 🎖️ 𝑴𝑨𝑹𝑲𝑬𝑻 𝑴𝑶𝑽𝑬𝑴𝑬𝑵𝑻 𝑫𝑬𝑻𝑬𝑪𝑻𝑬𝑫
 
-The 𝑽𝑨𝑳𝑼𝑬𝑯𝑼𝑵𝑻𝑬𝑹 system has detected **unusual betting activity across today's football markets.**
+The ValueHunter system has detected unusual betting activity across today's football markets.
 
-Sharp money is currently entering the market.
-
-When this happens, -odds tend to drop very quickly- as bookmakers react to large professional bets.
+Sharp money is entering the market and odds tend to drop quickly.
 
 ━━━━━━━━━━━━━━
 
-Elite members will receive the **official signal before the market reacts**.
+Elite members will receive the official signal before the market reacts.
 
-💡 𝑺𝑰𝑮𝑵𝑨𝑳 𝑹𝑬𝑳𝑬𝑨𝑺𝑬  
-🕕 𝟭𝟴:𝟬𝟬 — 𝗔𝗧𝗛𝗘𝗡𝗦 𝗧𝗜𝗠𝗘 🇬🇷
+🕕 SIGNAL RELEASE
+18:00 — Athens Time 🇬🇷
 
 ━━━━━━━━━━━━━━
 
-⚠️ Access to the ValueHunter network may close once signals are released.
+⚠️ Access may close once signals are released.
 """,
                 reply_markup=keyboard
             )
@@ -1735,8 +1731,12 @@ Elite members will receive the **official signal before the market reacts**.
             pass
 
 
-        # ---------- MESSAGE 3 (before signals) ----------
+        # ---------- MESSAGE 3 ----------
         time.sleep(3600)
+
+        tz = pytz.timezone("Europe/Athens")
+        now = datetime.now(tz)
+        hour = now.hour
 
         keyboard = InlineKeyboardMarkup()
         keyboard.add(
@@ -1747,25 +1747,62 @@ Elite members will receive the **official signal before the market reacts**.
         )
 
         try:
-            bot.send_message(
-                user_id,
+
+            if hour < 18:
+
+                bot.send_message(
+                    user_id,
 """
 ⏳ 𝑭𝑰𝑵𝑨𝑳 𝑬𝑵𝑻𝑹𝒀 𝑾𝑰𝑵𝑫𝑶𝑾
 
-Today's signals will be released soon.
+Today's signals will be released very soon.
 
-Our model 𝑽𝑨𝑳𝑼𝑬𝑯𝑼𝑵𝑻𝑬𝑹 has already selected the **strongest value opportunities** from hundreds of matches.
+Our analytics engine has already selected the strongest value opportunities from hundreds of matches.
 
 ━━━━━━━━━━━━━━
 
-⚠️ Once signals are released, access may close to protect the betting edge.
+👑 𝑬𝑳𝑰𝑻𝑬 𝑵𝑬𝑻𝑾𝑶𝑹𝑲
 
-𝗘𝗟𝗜𝗧𝗘 𝗠𝗘𝗠𝗕𝗘𝗥𝗦 𝗔𝗥𝗘 𝗔𝗟𝗥𝗘𝗔𝗗𝗬 𝗣𝗥𝗘𝗣𝗔𝗥𝗜𝗡𝗚 𝗧𝗢𝗗𝗔𝗬’𝗦 𝗕𝗘𝗧𝗦.
+17 members are already preparing today's bets.
+
+━━━━━━━━━━━━━━
+
+🕕 OFFICIAL SIGNAL RELEASE
+18:00 — Athens Time 🇬🇷
+
+━━━━━━━━━━━━━━
+
+⚠️ Once signals are released access may close.
 
 Secure your access before the release.
 """,
-                reply_markup=keyboard
-            )
+                    reply_markup=keyboard
+                )
+
+            else:
+
+                bot.send_message(
+                    user_id,
+"""
+🔥 𝑻𝑶𝑫𝑨𝒀'𝑺 𝑺𝑰𝑮𝑵𝑨𝑳𝑺 𝑹𝑬𝑳𝑬𝑨𝑺𝑬𝑫
+
+Today's ValueHunter signals have already been delivered to Elite members.
+
+━━━━━━━━━━━━━━
+
+👑 𝑬𝑳𝑰𝑻𝑬 𝑵𝑬𝑻𝑾𝑶𝑹𝑲
+
+Members are already placing today's bets.
+
+━━━━━━━━━━━━━━
+
+⚠️ Access to the signal network may close during active betting hours.
+
+Unlock access to receive tomorrow's signals.
+""",
+                    reply_markup=keyboard
+                )
+
         except:
             pass
 
