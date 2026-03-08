@@ -1176,7 +1176,9 @@ def get_value_bets():
         
         # ---------- TEMPO FILTER ----------
 
-        if total_xg < 1.7 or total_xg > 4.3:
+        if total_xg < 1.9 or total_xg > 3.9:
+            
+        if xg_diff > 1.8:
             continue
 
         if not model_sanity_filter(home_xg, away_xg):
@@ -1264,7 +1266,10 @@ def get_value_bets():
             
             # ---------- ODDS RANGE FILTER ----------
 
-            if odds_value < 1.55 or odds_value > 3.80:
+            if odds_value < 1.60 or odds_value > 2.40:
+                continue
+                
+            if odds_value < 1.70 and prob < 0.60:
                 continue
 
             implied = implied_probability(odds_value)
@@ -1273,7 +1278,7 @@ def get_value_bets():
             
             market_prob = 1 / odds_value
 
-            if prob - market_prob < 0.02:
+            if prob - market_prob < 0.04:
                 continue
 
             if not liquidity_filter(
@@ -1301,12 +1306,12 @@ def get_value_bets():
             
             # ---------- PROBABILITY STABILITY FILTER ----------
 
-            if prob > 0.80:
+            if prob > 0.85:
                 continue
                 
-            if edge < 0.035 or prob < 0.54:
+            if edge < 0.04 or prob < 0.58:
                 continue
-
+                
             ev = calculate_ev(prob, odds_value)
 
             move = track_odds(
@@ -1332,6 +1337,9 @@ def get_value_bets():
                 prob,
                 odds_value
             )
+            
+            if stake > 0.06:
+                continue
 
             timing_signal = market_timing_engine(
                 prob,
@@ -1381,7 +1389,7 @@ def get_value_bets():
             if prob >= 0.62:
                 confidence += 3
 
-            if ev <= 0.035:
+            if ev <= 0.04:
                 continue
 
             pick = market
@@ -1438,10 +1446,10 @@ def get_value_bets():
 
     for bet in ranked:
 
-        if bet["prob"] >= 0.65 and not super_safe:
+        if bet["prob"] >= 0.63 and 1.60 <= bet["odds"] <= 1.90 and not super_safe:
             super_safe = bet
 
-        elif bet["prob"] >= 0.57:
+        elif bet["prob"] >= 0.60 and bet["odds"] <= 2.20:
             high_value.append(bet)
 
     signals = []
@@ -1479,7 +1487,7 @@ f"""🔥 𝑯𝑰𝑮𝑯 𝑽𝑨𝑳𝑼𝑬
         )
         
     # ---------- FALLBACK BET ----------
-    if not signals and ranked:
+    if not signals and candidates:
 
         bet = ranked[0]
 
@@ -3665,7 +3673,32 @@ def sendvip(m):
 
         text = "🎖️ VIP SIGNALS\n\n" + "\n\n".join(picks)
 
-        bot.send_message(uid,text)
+        bot.send_message(uid, text)
+
+    # -------- SAVE BETS TO HISTORY --------
+
+    for bet in bets:
+
+        try:
+
+            lines = bet.split("\n")
+
+            match = lines[0].replace("⚽ ","")
+            pick = lines[1].replace("🎯 ","")
+            odds = float(lines[2].replace("💰 Odds ",""))
+
+            cursor.execute(
+            """
+            INSERT INTO bets_history(match,pick,odds,result,timestamp)
+            VALUES(?,?,?,?,?)
+            """,
+            (match,pick,odds,"PENDING",int(time.time()))
+            )
+
+        except:
+            pass
+
+    db.commit()
 
     bot.send_message(m.chat.id,"VIP signals sent.")
     
@@ -3806,7 +3839,7 @@ def bets(m):
     rows = cursor.execute(
         "SELECT match,pick,odds,result FROM bets_history ORDER BY id DESC LIMIT 10"
     ).fetchall()
-
+    
     text = "LAST BETS\n\n"
 
     for match,pick,odds,result in rows:
