@@ -40,6 +40,32 @@ timeout=30
 )
 cursor = db.cursor()
 
+bot = telebot.TeleBot(TOKEN)
+app = Flask(__name__)
+
+# ================= DATABASE =================
+
+db = sqlite3.connect(
+"database.db",
+check_same_thread=False,
+timeout=30
+)
+cursor = db.cursor()
+
+bot = telebot.TeleBot(TOKEN)
+app = Flask(__name__)
+
+# ================= DATABASE =================
+
+db = sqlite3.connect(
+"database.db",
+check_same_thread=False,
+timeout=30
+)
+cursor = db.cursor()
+
+active_funnels = set()
+
 cursor.execute("""
 CREATE TABLE IF NOT EXISTS vip_users(
 user_id INTEGER PRIMARY KEY,
@@ -1623,10 +1649,23 @@ Odds dropped:
 
 def start_conversion_funnel(user_id):
 
+    if user_id in active_funnels:
+        return
+
+    active_funnels.add(user_id)
+
     def funnel():
 
         # ---------- MESSAGE 1 (30 minutes) ----------
         time.sleep(1800)
+
+        keyboard = InlineKeyboardMarkup()
+        keyboard.add(
+            InlineKeyboardButton(
+                "⚜️ 𝑼𝑵𝑳𝑶𝑪𝑲 𝑬𝑳𝑰𝑻𝑬 𝑨𝑪𝑪𝑬𝑺𝑺",
+                callback_data="elite"
+            )
+        )
 
         try:
             bot.send_message(
@@ -1649,7 +1688,8 @@ Access to the 𝑽𝑨𝑳𝑼𝑬𝑯𝑼𝑵𝑻𝑬𝑹 network is currently 
 Secure your position before the market moves.
 
 ▼ 𝑼𝑺𝑬 𝑻𝑯𝑬 𝑴𝑬𝑵𝑼 𝑩𝑬𝑳𝑶𝑾 𝑻𝑶 𝑼𝑵𝑳𝑶𝑪𝑲 𝑨𝑪𝑪𝑬𝑺𝑺.
-"""
+""",
+                reply_markup=keyboard
             )
         except:
             pass
@@ -1658,13 +1698,21 @@ Secure your position before the market moves.
         # ---------- MESSAGE 2 (2 hours) ----------
         time.sleep(7200)
 
+        keyboard = InlineKeyboardMarkup()
+        keyboard.add(
+            InlineKeyboardButton(
+                "⚜️ 𝑼𝑵𝑳𝑶𝑪𝑲 𝑬𝑳𝑰𝑻𝑬 𝑨𝑪𝑪𝑬𝑺𝑺",
+                callback_data="elite"
+            )
+        )
+
         try:
             bot.send_message(
                 user_id,
 """
 🎖️ 𝑴𝑨𝑹𝑲𝑬𝑻 𝑴𝑶𝑽𝑬𝑴𝑬𝑵𝑻 𝑫𝑬𝑻𝑬𝑪𝑻𝑬𝑫
 
-The 𝑽𝑨𝑳𝑼𝑬𝑯𝑼𝑵𝑻𝑬𝑹 system has detected **unusual betting activity across today's football markets.
+The 𝑽𝑨𝑳𝑼𝑬𝑯𝑼𝑵𝑻𝑬𝑹 system has detected **unusual betting activity across today's football markets.**
 
 Sharp money is currently entering the market.
 
@@ -1680,7 +1728,8 @@ Elite members will receive the **official signal before the market reacts**.
 ━━━━━━━━━━━━━━
 
 ⚠️ Access to the ValueHunter network may close once signals are released.
-"""
+""",
+                reply_markup=keyboard
             )
         except:
             pass
@@ -1719,6 +1768,10 @@ Secure your access before the release.
             )
         except:
             pass
+
+
+        active_funnels.discard(user_id)
+
 
     threading.Thread(target=funnel).start()
     
