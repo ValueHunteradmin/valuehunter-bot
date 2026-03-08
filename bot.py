@@ -14,6 +14,7 @@ import os
 import hmac
 import hashlib
 import json
+from urllib.parse import quote
 
 # ================= CONFIG =================
 
@@ -2241,6 +2242,12 @@ Invite new members to the ValueHunter platform and unlock exclusive rewards.
 Share your link and earn rewards when members activate a subscription.
 """
 
+    share_text = quote("""🔥 I just joined the ValueHunter AI betting system.
+
+Daily VIP signals at 18:00 🇬🇷
+
+Join here:""")
+    
     keyboard = InlineKeyboardMarkup()
 
     keyboard.add(
