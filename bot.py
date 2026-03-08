@@ -1177,7 +1177,7 @@ def get_value_bets():
         # ---------- TEMPO FILTER ----------
 
         if total_xg < 1.9 or total_xg > 3.9:
-            
+            continue
         if xg_diff > 1.8:
             continue
 
@@ -1264,6 +1264,12 @@ def get_value_bets():
 
         for market, prob, odds_value, line in markets:
             
+            # ---------- PROBABILITY STABILITY FILTER ----------
+            expected_range = 0.45 + (total_xg - 2.2) * 0.08
+
+            if prob > expected_range + 0.18:
+                continue
+            
             # ---------- ODDS RANGE FILTER ----------
 
             if odds_value < 1.60 or odds_value > 2.40:
@@ -1277,6 +1283,11 @@ def get_value_bets():
             edge = prob - implied
             
             market_prob = 1 / odds_value
+            
+            # ---------- SHARP MARKET FILTER ----------
+
+            if abs(prob - market_prob) > 0.12:
+                continue
 
             if prob - market_prob < 0.04:
                 continue
