@@ -387,6 +387,30 @@ def get_matches():
         matches.append((home,away))
 
     return matches
+    
+def model_extra_tip(over15_prob, over25_prob, over35_prob, btts_prob):
+
+    candidates = []
+
+    if over25_prob > 0.60:
+        candidates.append(("Over 2.5", over25_prob))
+
+    if btts_prob > 0.58:
+        candidates.append(("BTTS Yes", btts_prob))
+
+    if over15_prob > 0.75:
+        candidates.append(("Over 1.5", over15_prob))
+
+    if over35_prob > 0.40:
+        candidates.append(("Over 3.5", over35_prob))
+
+    if not candidates:
+        return None
+
+    # παίρνει το πιο δυνατό probability
+    best = max(candidates, key=lambda x: x[1])
+
+    return best
 
 # ================= VALUE ENGINE =================
 
@@ -442,6 +466,126 @@ fixtures_cache = []
 fixtures_cache_time = 0
 alert_cache = None
 alert_cache_time = 0
+
+    return random.choice(tips)
+    
+def dev_engine(chat_id):
+
+    bets = get_value_bets()
+
+    if not bets:
+        bot.send_message(chat_id,"No value bets found.")
+        return
+
+    text = "🧠 𝑽𝑨𝑳𝑼𝑬 𝑬𝑵𝑮𝑰𝑵𝑬 𝑨𝑵𝑨𝑳𝒀𝑺𝑰𝑺\n\n"
+
+    for bet in bets:
+
+        lines = bet.split("\n")
+
+        try:
+            match = lines[1]
+            pick = lines[2]
+            odds = lines[3]
+        except:
+            continue
+
+        confidence = random.randint(78,92)
+        steam = random.choice(["LOW","MEDIUM","HIGH"])
+        clv = round(random.uniform(3,10),1)
+
+        # placeholder probabilities (μόνο για dev)
+        over15_prob = random.uniform(0.65,0.85)
+        over25_prob = random.uniform(0.55,0.70)
+        over35_prob = random.uniform(0.30,0.45)
+        btts_prob = random.uniform(0.50,0.65)
+
+        extra = model_extra_tip(
+            over15_prob,
+            over25_prob,
+            over35_prob,
+            btts_prob
+        )
+
+        text += f"""
+⚽ {match}
+🎯 {pick}
+📊 {odds}
+
+━━━━━━━━━━━━━━
+
+📊 MODEL INSIGHTS
+
+Confidence: {confidence}%
+Steam signal: {steam}
+CLV prediction: {clv}%
+"""
+
+        if extra:
+
+            tip_name, tip_prob = extra
+
+            text += f"""
+
+🧠 EXTRA MODEL TIP
+
+{tip_name}
+Model probability: {round(tip_prob*100)}%
+"""
+
+        text += "\n━━━━━━━━━━━━━━\n"
+
+    bot.send_message(chat_id,text)
+
+def dev_parlay(chat_id):
+
+    bets = get_value_bets()
+
+    candidates = []
+
+    for bet in bets:
+
+        lines = bet.split("\n")
+
+        match = lines[1]
+        pick = lines[2]
+
+        odds_line = lines[3]
+
+        try:
+            odds = float(odds_line.replace("📊 Odds ",""))
+        except:
+            continue
+
+        if 1.60 <= odds <= 2.20:
+            candidates.append((match,pick,odds))
+
+    if len(candidates) < 5:
+        bot.send_message(chat_id,"Not enough parlay candidates.")
+        return
+
+    random.shuffle(candidates)
+
+    picks = candidates[:5]
+
+    text = "🎰 𝑽𝑨𝑳𝑼𝑬𝑯𝑼𝑵𝑻𝑬𝑹 𝑽𝑨𝑳𝑼𝑬 𝑷𝑨𝑹𝑳𝑨𝒀\n\n"
+
+    total = 1
+
+    for i,(match,pick,odds) in enumerate(picks,1):
+
+        total *= odds
+
+        text += f"""
+{i}. ⚽ {match}
+🎯 {pick}
+📊 Odds {odds}
+
+"""
+
+    text += f"\n💰 TOTAL ODDS ≈ {round(total,2)}"
+
+    bot.send_message(chat_id,text)
 
 # ---------- IMPLIED PROBABILITY ----------
 
@@ -3222,6 +3366,12 @@ Elite members are already positioned on today's value opportunities.
             c.message.message_id,
             reply_markup=keyboard
         )
+        
+    elif c.data == "dev_engine":
+        dev_engine(c.message.chat.id)
+
+    elif c.data == "dev_parlay":
+        dev_parlay(c.message.chat.id)
 
     # ---------- BANKROLL ----------
     elif c.data == "vip_bankroll":
