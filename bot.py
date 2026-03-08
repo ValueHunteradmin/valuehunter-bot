@@ -466,8 +466,6 @@ fixtures_cache = []
 fixtures_cache_time = 0
 alert_cache = None
 alert_cache_time = 0
-
-    return random.choice(tips)
     
 def dev_engine(chat_id):
 
