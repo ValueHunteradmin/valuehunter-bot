@@ -324,7 +324,7 @@ def webhook():
     
     # ---------- UNLOCK REFERRAL VIP PANEL ----------
 
-    if plan == "pro":
+    if plan == "PRO":
 
         cursor.execute(
         "INSERT OR IGNORE INTO referral_stats(user_id) VALUES(?)",
@@ -679,7 +679,7 @@ def scan_matches():
         now = int(time.time())
 
         # ---------- 5 TIME WINDOW ----------
-        if not (7200 <= match_time-now <= 259200):
+        if not (1800 <= match_time-now <= 259200):
             continue
 
         fixtures.append({
@@ -992,61 +992,6 @@ def track_odds(fixture_id,odds):
 
     return movement
 
-
-# ---------- STEAM DETECTOR ----------
-
-def detect_steam_move(fixture_id,odds):
-
-    if fixture_id not in steam_history:
-        steam_history[fixture_id]=odds
-        return False
-
-    drop=steam_history[fixture_id]-odds
-    steam_history[fixture_id]=odds
-
-    return drop>=0.20
-# ---------- STEAM PREDICTOR ----------
-
-def predict_steam(prob, odds):
-
-    market_prob = 1 / odds
-
-    edge = prob - market_prob
-
-    # αν το model διαφωνεί έντονα με την αγορά
-    if edge > 0.08 and prob > 0.60:
-        return True
-
-    return False
-    
-    # ---------- MARKET TIMING ENGINE ----------
-
-def market_timing_engine(prob, odds):
-
-    market_prob = 1 / odds
-
-    edge = prob - market_prob
-
-    # μεγάλο edge → πιθανό odds drop
-    if edge > 0.06 and prob > 0.60:
-        return True
-
-    return False
-    
-# ---------- CLV TRACKER ----------
-
-def track_clv(fixture_id,odds):
-
-    if fixture_id not in clv_history:
-        clv_history[fixture_id]=odds
-        return 0
-
-    open_odds=clv_history[fixture_id]
-
-    clv=open_odds-odds
-
-    return clv
-    
 # ---------- EV ----------
 
 def calculate_ev(prob,odds):
@@ -1448,7 +1393,7 @@ def get_value_bets():
             
             # ---------- ODDS RANGE FILTER ----------
 
-            if odds_value < 1.60 or odds_value > 2.40:
+            if odds_value < 1.50 or odds_value > 2.80:
                 continue
                 
             if odds_value < 1.70 and prob < 0.60:
@@ -1496,7 +1441,7 @@ def get_value_bets():
             if prob > 0.85:
                 continue
                 
-            if edge < 0.04 or prob < 0.58:
+            if edge < 0.025 or prob < 0.54:
                 continue
                 
             ev = calculate_ev(prob, odds_value)
@@ -2365,7 +2310,7 @@ def send_signals():
 
         # ---------- ADMIN 17:00 ----------
 
-        if hour == 17 and minute == 0 and not admin_sent_today:
+        if hour == 17 and minute <= 2 and not admin_sent_today:
 
             if bets:
                 bot.send_message(
@@ -2466,7 +2411,7 @@ def send_signals():
                     
         # ---------- VIP 18:00 ----------
 
-        if hour == 18 and minute == 0 and not vip_sent_today:
+        if hour == 18 and minute <= 2 and not vip_sent_today:
 
             vip_sent_today = True 
             
