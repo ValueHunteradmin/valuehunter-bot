@@ -1389,7 +1389,7 @@ def get_value_bets():
             # ---------- PROBABILITY STABILITY FILTER ----------
             expected_range = 0.45 + (total_xg - 2.2) * 0.08
 
-            if prob > expected_range + 0.18:
+            if prob > expected_range + 0.15:
                 continue
             
             # ---------- ODDS RANGE FILTER ----------
