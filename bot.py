@@ -3140,7 +3140,8 @@ Top users inside the network are already earning free months through referrals.
 @bot.callback_query_handler(func=lambda c: True)
 def callbacks(c):
 
-    bot.answer_callback_query(c.id)
+    bot.answer_callback_query(c.elif c.data == "dev_sendvip":
+    sendvip(c.message)
 
     # ---------- VIP DASHBOARD ----------
     if c.data == "vip_dashboard":
@@ -3370,6 +3371,36 @@ Elite members are already positioned on today's value opportunities.
 
     elif c.data == "dev_parlay":
         dev_parlay(c.message.chat.id)
+    
+    elif c.data == "dev_sendvip":
+        sendvip(c.message)
+
+    elif c.data == "dev_stats":
+        stats(c.message)
+
+    elif c.data == "dev_bankroll":
+        bankroll(c.message)
+
+    elif c.data == "dev_users":
+        users(c.message)
+
+    elif c.data == "dev_viplist":
+        viplist(c.message)
+
+    elif c.data == "dev_bets":
+        bets(c.message)
+
+    elif c.data == "dev_broadcast":
+        broadcast(c.message)
+
+    elif c.data == "dev_alert":
+        force_alert(c.message)
+
+    elif c.data == "dev_reload":
+        reload_engine(c.message)
+
+    elif c.data == "dev_payment":
+        test_payment(c.message)
 
     # ---------- BANKROLL ----------
     elif c.data == "vip_bankroll":
