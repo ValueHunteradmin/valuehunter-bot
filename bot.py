@@ -1515,8 +1515,8 @@ def get_value_bets():
                 confidence += 5
                 
             # ideal odds range bonus
-            if 1.70 <= odds_value <= 2.20:
-                confidence += 4
+            if 1.75 <= odds_value <= 2.05:
+                confidence += 6
 
             # strong probability bonus
             if prob >= 0.62:
