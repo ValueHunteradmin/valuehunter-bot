@@ -2201,6 +2201,8 @@ def referral_discount(user_id):
 # ---------- REFERRAL PANEL ----------
 
 def referral_panel(user_id):
+    
+    ref_link = f"https://t.me/ValueHunterElite_botstart={user_id}"
 
     count = get_referrals(user_id)
 
@@ -2247,10 +2249,17 @@ Share your link and earn rewards when members activate a subscription.
             callback_data="top_ref"
         )
     )
+    
+    keyboard.add(
+        InlineKeyboardButton(
+            "📤 𝑺𝑯𝑨𝑹𝑬 𝑽𝑨𝑳𝑼𝑬𝑯𝑼𝑵𝑻𝑬𝑹",
+            url=f"https://t.me/share/url?url={ref_link}&text=🔥 Join ValueHunter Elite AI Betting System"
+        )
+    )
 
     keyboard.add(
         InlineKeyboardButton(
-            "⬅ BACK",
+            "◀ 𝑩𝑨𝑪𝑲",
             callback_data="back_menu"
         )
     )
