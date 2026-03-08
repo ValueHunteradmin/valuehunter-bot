@@ -1250,7 +1250,7 @@ def get_value_bets():
     global value_cache, value_cache_time
 
     # αν έχουν περάσει λιγότερα από 15 λεπτά
-    if time.time() - value_cache_time < 900:
+    if time.time() - value_cache_time < 900 and value_cache:
         return value_cache
 
     fixtures = scan_matches()
@@ -1297,8 +1297,9 @@ def get_value_bets():
         
         # ---------- TEMPO FILTER ----------
 
-        if total_xg < 1.9 or total_xg > 3.9:
+        if total_xg < 2.2 or total_xg > 3.8:
             continue
+            
         if xg_diff > 1.8:
             continue
 
