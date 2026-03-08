@@ -1289,7 +1289,7 @@ def get_value_bets():
         
         # ---------- TEAM BALANCE FILTER ----------
 
-        if abs(home_xg - away_xg) > 2.5:
+        if abs(home_xg - away_xg) > 2.2:
             continue
         
         xg_diff = abs(home_xg - away_xg)
@@ -1300,7 +1300,7 @@ def get_value_bets():
         if total_xg < 2.2 or total_xg > 3.8:
             continue
             
-        if xg_diff > 1.8:
+        if xg_diff > 1.6:
             continue
 
         if not model_sanity_filter(home_xg, away_xg):
