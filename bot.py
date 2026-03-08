@@ -3902,6 +3902,59 @@ def test_payment(m):
         m.chat.id,
         f"Test payment link:\n{link}"
     )
+    
+@bot.message_handler(commands=["defmenu"])
+def defmenu(m):
+
+    if m.chat.id != ADMIN_ID:
+        return
+
+    keyboard = InlineKeyboardMarkup()
+
+    keyboard.add(
+        InlineKeyboardButton("🧠 𝑻𝑬𝑺𝑻 𝑽𝑨𝑳𝑼𝑬 𝑬𝑵𝑮𝑰𝑵𝑬", callback_data="dev_engine")
+    )
+
+    keyboard.add(
+        InlineKeyboardButton("🎰 𝑽𝑨𝑳𝑼𝑬 𝑷𝑨𝑹𝑳𝑨𝒀", callback_data="dev_parlay")
+    )
+
+    keyboard.add(
+        InlineKeyboardButton("🎯 𝑺𝑬𝑵𝑫 𝑽𝑰𝑷 𝑺𝑰𝑮𝑵𝑨𝑳𝑺", callback_data="dev_sendvip")
+    )
+
+    keyboard.add(
+        InlineKeyboardButton("📊 𝑺𝑻𝑨𝑻𝑺", callback_data="dev_stats"),
+        InlineKeyboardButton("🏦 𝑩𝑨𝑵𝑲𝑹𝑶𝑳𝑳", callback_data="dev_bankroll")
+    )
+
+    keyboard.add(
+        InlineKeyboardButton("👥 𝑼𝑺𝑬𝑹𝑺", callback_data="dev_users"),
+        InlineKeyboardButton("👑 𝑽𝑰𝑷 𝑳𝑰𝑺𝑻", callback_data="dev_viplist")
+    )
+
+    keyboard.add(
+        InlineKeyboardButton("📊 𝑳𝑨𝑺𝑻 𝑩𝑬𝑻𝑺", callback_data="dev_bets")
+    )
+
+    keyboard.add(
+        InlineKeyboardButton("📢 𝑩𝑹𝑶𝑨𝑫𝑪𝑨𝑺𝑻", callback_data="dev_broadcast"),
+        InlineKeyboardButton("📡 𝑭𝑶𝑹𝑪𝑬 𝑨𝑳𝑬𝑹𝑻", callback_data="dev_alert")
+    )
+
+    keyboard.add(
+        InlineKeyboardButton("🔄 𝑹𝑬𝑳𝑶𝑨𝑫 𝑬𝑵𝑮𝑰𝑵𝑬", callback_data="dev_reload")
+    )
+
+    keyboard.add(
+        InlineKeyboardButton("💳 𝑻𝑬𝑺𝑻 𝑷𝑨𝒀𝑴𝑬𝑵𝑻", callback_data="dev_payment")
+    )
+
+    bot.send_message(
+        m.chat.id,
+        "🛠 𝑽𝑨𝑳𝑼𝑬𝑯𝑼𝑵𝑻𝑬𝑹 𝑫𝑬𝑽 𝑷𝑨𝑵𝑬𝑳",
+        reply_markup=keyboard
+    )
 
 # ================= THREADS =================
 
