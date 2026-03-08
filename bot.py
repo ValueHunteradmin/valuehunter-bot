@@ -2751,7 +2751,7 @@ def start(m):
     user_id = m.chat.id
     
     if not is_vip(user_id):
-    startup_loading(user_id)
+        startup_loading(user_id)
     
     parts = m.text.split()
 
