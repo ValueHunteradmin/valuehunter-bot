@@ -3575,10 +3575,10 @@ Our support team will respond as soon as possible.
         
     elif c.data == "faq_referral":
 
-    faq_referral(
-        c.message.chat.id,
-        c.message.message_id
-    )
+        faq_referral(
+            c.message.chat.id,
+            c.message.message_id
+        )
 
     # ================= BACK =================
 
