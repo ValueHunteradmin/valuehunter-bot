@@ -829,15 +829,15 @@ def model_sanity_filter(home_xg, away_xg):
     total_xg = home_xg + away_xg
 
     # πολύ χαμηλό tempo παιχνίδι
-    if total_xg < 1.6:
+    if total_xg < 1.8:
         return False
 
     # πολύ υψηλό tempo (unstable poisson)
-    if total_xg > 4.8:
+    if total_xg > 4.5:
         return False
 
     # πολύ μονόπλευρο παιχνίδι
-    if abs(home_xg - away_xg) > 2.5:
+    if abs(home_xg - away_xg) > 2.2:
         return False
 
     return True
