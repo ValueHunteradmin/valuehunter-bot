@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 import pytz
 import telebot
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
@@ -614,7 +614,7 @@ def scan_matches():
     fixtures = []
 
     # ---------- 2 SCAN 3 DAYS ----------
-    today = datetime.utcnow().date()
+    today = datetime.now(UTC).date()
     future = today + timedelta(days=3)
 
     url = f"https://v3.football.api-sports.io/fixtures?from={today}&to={future}"
