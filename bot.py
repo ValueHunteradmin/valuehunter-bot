@@ -486,10 +486,6 @@ league_strength = {
 106:0.97   # Poland
 }
 
-odds_history={}
-steam_history={}
-clv_history={}
-
 team_stats_cache={}
 injury_cache={}
 league_odds_cache={}
@@ -628,13 +624,6 @@ def implied_probability(odds):
 
     return 1 / odds
     
-# ---------- TRUE MARKET PROBABILITY ----------
-
-def true_probability(prob):
-
-    # remove bookmaker margin
-    return prob / (1 + prob)
-
 # ---------- MATCH SCANNER ----------
 
 def scan_matches():
@@ -976,22 +965,6 @@ def get_league_odds(league_id):
 
     return odds_data
 
-# ---------- ODDS MOVEMENT ----------
-
-def track_odds(fixture_id,odds):
-
-    if fixture_id not in odds_history:
-        odds_history[fixture_id] = odds
-        return 0
-
-    old_odds = odds_history[fixture_id]
-
-    movement = old_odds - odds
-
-    odds_history[fixture_id] = odds
-
-    return movement
-
 # ---------- EV ----------
 
 def calculate_ev(prob,odds):
@@ -1040,19 +1013,6 @@ def liquidity_filter(league_id, odds):
         return False
 
     return True
-    
-# ---------- PINNACLE SHARP COMPARISON ----------
-
-def pinnacle_sharp_check(prob, odds):
-
-    pinnacle_prob = 1 / odds
-
-    edge = prob - pinnacle_prob
-
-    if edge > 0.03:
-        return True
-
-    return False
     
 # ---------- KELLY ----------
 
@@ -1458,13 +1418,6 @@ def get_value_bets():
                 (ev * 100)
             )
                 
-            if timing_signal:
-                confidence += 8
-                
-            # EARLY VALUE SIGNAL
-            if timing_signal and prob > 0.63:
-                confidence += 5
-                
             # ideal odds range bonus
             if 1.75 <= odds_value <= 2.05:
                 confidence += 6
@@ -1517,8 +1470,7 @@ def get_value_bets():
                 "odds": odds_value,
                 "ev": ev,
                 "confidence": confidence,
-                "stake": stake,
-                "early": early_text
+                "stake": stake
             })
 
     ranked = rank_bets(candidates)
@@ -1564,8 +1516,6 @@ f"""🔥 𝑯𝑰𝑮𝑯 𝑽𝑨𝑳𝑼𝑬
 📈 Probability {round(bet['prob']*100)}%
 💰 Value {round(bet['ev'],2)}
 💵 Stake {round(bet['stake']*100,1)}% bankroll
-
-{bet['early']}
 
 💸 Bet: 50€"""
         )
