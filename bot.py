@@ -1010,15 +1010,17 @@ def grade_results():
         if outcome == "WIN" and result == "PENDING":
             
             message = f"""
-        🔥 𝑾𝑰𝑵 𝑪𝑶𝑵𝑭𝑰𝑹𝑴𝑬𝑫
+        🎖️ 𝑾𝑰𝑵 𝑪𝑶𝑵𝑭𝑰𝑹𝑴𝑬𝑫
 
         ⚽ {match}
         🎯 {pick}
         🚀 Odds {odds}
-
-        𝑽𝑰𝑷 members collected another win today.
+        ━━━━━━━━━━━━━━
+        🏆 𝑽𝑰𝑷 𝗠𝗘𝗠𝗕𝗘𝗥𝗦 𝗖𝗢𝗟𝗟𝗘𝗖𝗧𝗘𝗗 𝗔𝗡𝗢𝗧𝗛𝗘𝗥 𝗪𝗜𝗡 𝗧𝗢𝗗𝗔𝗬.
         
-        📡 Next signals released at 18:00🇬🇷
+        📡 𝗡𝗘𝗫𝗧 𝗦𝗜𝗚𝗡𝗔𝗟𝗦 𝗥𝗘𝗟𝗘𝗔𝗦𝗘𝗗 𝗔𝗧 𝟭𝟴:𝟬𝟬
+        • 𝗔𝗧𝗛𝗘𝗡𝗦 𝗧𝗜𝗠𝗘 🇬🇷
+        
 
         🔐 𝑺𝑼𝑷𝑷𝑶𝑹𝑻: @MrMasterlegacy1
         """
@@ -1038,25 +1040,27 @@ def grade_results():
             free_users = get_all_users()
 
             free_text = f"""
-            🏆 𝑽𝑰𝑷 𝑾𝑰𝑵 𝑪𝑶𝑵𝑭𝑰𝑹𝑴𝑬𝑫
+            🎖️ 𝑽𝑰𝑷 𝑾𝑰𝑵 𝑪𝑶𝑵𝑭𝑰𝑹𝑴𝑬𝑫
 
             ⚽ {match}
             🎯 {pick}
-            🚀 Odds {odds}
+            📈 Odds {odds}
 
-            𝑬𝑳𝑰𝑻𝑬 members collected another **winning signal** today.
+            𝗘𝗟𝗜𝗧𝗘 𝗠𝗘𝗠𝗕𝗘𝗥𝗦 𝗖𝗢𝗟𝗟𝗘𝗖𝗧𝗘𝗗 𝗔𝗡𝗢𝗧𝗛𝗘𝗥 𝗪𝗜𝗡𝗡𝗜𝗡𝗚 𝗦𝗜𝗚𝗡𝗔𝗟 𝗧𝗢𝗗𝗔𝗬.
 
              ━━━━━━━━━━━━━━
 
-            🔥 More signals will be released again at **18:00**.
+            🎖️ 𝗠𝗢𝗥𝗘 𝗦𝗜𝗚𝗡𝗔𝗟𝗦 𝗪𝗜𝗟𝗟 𝗕𝗘 𝗥𝗘𝗟𝗘𝗔𝗦𝗘𝗗 𝗔𝗧 𝟭𝟴:𝟬𝟬
 
-            ⚠️ Access to the ValueHunter network may close once signals are released.
-            """
+             • 𝗔𝗧𝗛𝗘𝗡𝗦 𝗧𝗜𝗠𝗘 🇬🇷
+
+            ⚜️ 𝗔𝗖𝗖𝗘𝗦𝗦 𝗧𝗢 𝗧𝗛𝗘 𝗩𝗔𝗟𝗨𝗘𝗛𝗨𝗡𝗧𝗘𝗥 𝗡𝗘𝗧𝗪𝗢𝗥𝗞 𝗠𝗔𝗬 𝗖𝗟𝗢𝗦𝗘 𝗢𝗡𝗖𝗘 𝗦𝗜𝗚𝗡𝗔𝗟𝗦 𝗔𝗥𝗘 𝗥𝗘𝗟𝗘𝗔𝗦𝗘𝗗.
+             """
 
             keyboard = InlineKeyboardMarkup()
             keyboard.add(
                 InlineKeyboardButton(
-                    "🔐 Unlock VIP Access",
+                    "⚜️ 𝑼𝑵𝑳𝑶𝑪𝑲 𝑽𝑰𝑷 𝑨𝑪𝑪𝑬𝑺𝑺",
                     callback_data="elite"
                 )
             )
