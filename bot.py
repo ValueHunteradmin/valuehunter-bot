@@ -2254,7 +2254,7 @@ Share your link and earn rewards when members activate a subscription.
     keyboard.add(
         InlineKeyboardButton(
             "📤 SHARE BOT",
-            url=f"https://t.me/share/url?text=🔥 I just joined the ValueHunter AI betting system.\n\nDaily VIP signals at 18:00 🇬🇷\n\nJoin here: {ref_link}"
+            url=f"tg://msg?text=🔥 I just joined the ValueHunter AI betting system.\n\nDaily VIP signals at 18:00 🇬🇷\n\nJoin here: {ref_link}"
         )
     )
     keyboard.add(
