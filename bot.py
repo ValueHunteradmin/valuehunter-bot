@@ -40,30 +40,6 @@ timeout=30
 )
 cursor = db.cursor()
 
-bot = telebot.TeleBot(TOKEN)
-app = Flask(__name__)
-
-# ================= DATABASE =================
-
-db = sqlite3.connect(
-"database.db",
-check_same_thread=False,
-timeout=30
-)
-cursor = db.cursor()
-
-bot = telebot.TeleBot(TOKEN)
-app = Flask(__name__)
-
-# ================= DATABASE =================
-
-db = sqlite3.connect(
-"database.db",
-check_same_thread=False,
-timeout=30
-)
-cursor = db.cursor()
-
 active_funnels = set()
 
 cursor.execute("""
@@ -114,6 +90,36 @@ user_id INTEGER PRIMARY KEY
 cursor.execute("""
 CREATE TABLE IF NOT EXISTS processed_payments(
 payment_id TEXT PRIMARY KEY
+)
+""")
+
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS users(
+user_id INTEGER PRIMARY KEY
+)
+""")
+
+# ---------- REFERRAL SYSTEM ----------
+
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS referrals(
+referrer INTEGER,
+referred INTEGER PRIMARY KEY
+)
+""")
+
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS referral_stats(
+user_id INTEGER PRIMARY KEY,
+count INTEGER DEFAULT 0,
+unlocked INTEGER DEFAULT 0
+)
+""")
+
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS discount_wallet(
+user_id INTEGER PRIMARY KEY,
+discount INTEGER DEFAULT 0
 )
 """)
 
@@ -186,11 +192,12 @@ def main_menu():
 
     m = InlineKeyboardMarkup()
 
-    m.add(InlineKeyboardButton("⚜️ 𝑼𝑵𝑳𝑶𝑪𝑲 𝑽𝑰𝑷 𝑺𝑰𝑮𝑵𝑨𝑳𝑺", callback_data="elite"))
+    m.add(InlineKeyboardButton("🎖️ 𝑼𝑵𝑳𝑶𝑪𝑲 𝑽𝑰𝑷 𝑺𝑰𝑮𝑵𝑨𝑳𝑺", callback_data="elite"))
     m.add(InlineKeyboardButton("🎁 𝑻𝑶𝑫𝑨𝒀'𝑺 𝑭𝑹𝑬𝑬 𝑩𝑬𝑻", callback_data="sample"))
     m.add(InlineKeyboardButton("⚡ 𝑴𝑨𝑹𝑲𝑬𝑻 𝑨𝑳𝑬𝑹𝑻", callback_data="alert"))
-    m.add(InlineKeyboardButton("🎖️ 𝑷𝑬𝑹𝑭𝑶𝑹𝑴𝑨𝑵𝑪𝑬", callback_data="perf"))
-    m.add(InlineKeyboardButton("💬 𝑺𝑼𝑷𝑷𝑶𝑹𝑻", callback_data="support"))
+    m.add(InlineKeyboardButton("🫆 𝑷𝑬𝑹𝑭𝑶𝑹𝑴𝑨𝑵𝑪𝑬", callback_data="perf"))
+    m.add(InlineKeyboardButton("👑 𝑹𝑬𝑭𝑬𝑹𝑹𝑨𝑳 𝑷𝑹𝑶𝑮𝑹𝑨𝑴", callback_data="referral"))
+    m.add(InlineKeyboardButton("🧑🏼‍💻 𝑺𝑼𝑷𝑷𝑶𝑹𝑻", callback_data="support"))
 
     return m
 
@@ -279,6 +286,22 @@ def webhook():
     )
 
     db.commit()
+    
+    # ---------- UNLOCK REFERRAL VIP PANEL ----------
+
+    if plan == "pro":
+
+        cursor.execute(
+        "INSERT OR IGNORE INTO referral_stats(user_id) VALUES(?)",
+        (user_id,)
+        )
+
+        cursor.execute(
+        "UPDATE referral_stats SET unlocked=1 WHERE user_id=?",
+        (user_id,)
+        )
+
+        db.commit()
 
     bot.send_message(
         user_id,
@@ -314,6 +337,24 @@ Elite members are already preparing today's positions.
     )
 
     db.commit()
+    
+    cursor.execute(
+    "SELECT referrer FROM referrals WHERE referred=?",
+    (user_id,)
+    )
+
+    r = cursor.fetchone()
+
+    if r:
+
+        referrer = r[0]
+
+        cursor.execute(
+        "UPDATE referral_stats SET count=count+1 WHERE user_id=?",
+        (referrer,)
+        )
+
+        db.commit()
     
     threading.Thread(
         target=vip_initialization_animation,
@@ -1873,6 +1914,99 @@ def performance():
 𝗣𝗥𝗢𝗙𝗜𝗧: {round(wp,2)} €
 """
 
+# ---------- REFERRAL LINK ----------
+
+def referral_link(user_id):
+
+    return f"https://t.me/ValueHunterElite_bot?start={user_id}"
+    
+    # ---------- REFERRAL COUNT ----------
+
+def get_referrals(user_id):
+
+    cursor.execute(
+        "SELECT COUNT(*) FROM referrals WHERE referrer=?",
+        (user_id,)
+    )
+
+    result = cursor.fetchone()
+
+    if result:
+        return result[0]
+
+    return 0
+    
+    # ---------- REFERRAL DISCOUNT ----------
+
+def referral_discount(user_id):
+
+    count = get_referrals(user_id)
+
+    return (count // 30) * 50
+    
+# ---------- REFERRAL PANEL ----------
+
+def referral_panel(user_id):
+
+    count = get_referrals(user_id)
+
+    discount = referral_discount(user_id)
+
+    link = referral_link(user_id)
+
+    progress = min(count,30)
+
+    blocks = int((progress/30)*16)
+
+    bar = "█"*blocks + "░"*(16-blocks)
+
+    text = f"""
+🎁 𝑽𝑨𝑳𝑼𝑬𝑯𝑼𝑵𝑻𝑬𝑹 𝑹𝑬𝑭𝑬𝑹𝑹𝑨𝑳 𝑵𝑬𝑻𝑾𝑶𝑹𝑲
+
+Invite new members to the ValueHunter platform and unlock exclusive rewards.
+
+━━━━━━━━━━━━━━
+
+📊 Progress
+
+{bar}
+{count} / 30
+
+🏆 Reward
+
+50% PRO ACCESS
+
+━━━━━━━━━━━━━━
+
+🔗 Your personal referral link
+
+{link}
+
+Share your link and earn rewards when members activate a subscription.
+"""
+
+    keyboard = InlineKeyboardMarkup()
+
+    keyboard.add(
+        InlineKeyboardButton(
+            "👑 𝑻𝑶𝑷 𝑹𝑬𝑭𝑬𝑹𝑹𝑬𝑹𝑺",
+            callback_data="top_ref"
+        )
+    )
+
+    keyboard.add(
+        InlineKeyboardButton(
+            "⬅ BACK",
+            callback_data="back_menu"
+        )
+    )
+
+    bot.send_message(
+        user_id,
+        text,
+        reply_markup=keyboard
+    )
+
 # ---------- MONTHLY REPORT ----------
 
 def monthly_report():
@@ -2523,6 +2657,32 @@ def signal_timer():
 def start(m):
     
     user_id = m.chat.id
+    
+    parts = m.text.split()
+
+    if len(parts) > 1:
+
+        try:
+
+            referrer = int(parts[1])
+
+            if referrer != user_id:
+
+                cursor.execute(
+                    "INSERT OR IGNORE INTO referrals(referrer,referred) VALUES(?,?)",
+                    (referrer,user_id)
+                )
+
+                db.commit()
+
+        except:
+            pass
+    
+    cursor.execute(
+    "INSERT OR IGNORE INTO users VALUES (?)",
+    (user_id,)
+    )
+    db.commit()
 
     if is_vip(user_id):
         send_vip_dashboard(user_id)
@@ -2533,7 +2693,7 @@ def start(m):
     bot.send_message(
         m.chat.id,
 f"""
-⚜️ 𝑾𝑬𝑳𝑪𝑶𝑴𝑬 𝑻𝑶 𝑽𝑨𝑳𝑼𝑬𝑯𝑼𝑵𝑻𝑬𝑹
+🎖️ 𝑾𝑬𝑳𝑪𝑶𝑴𝑬 𝑻𝑶 𝑽𝑨𝑳𝑼𝑬𝑯𝑼𝑵𝑻𝑬𝑹
 
 You are currently viewing the ValueHunter platform.
 
@@ -2546,9 +2706,9 @@ Full access to the 𝑬𝑳𝑰𝑻𝑬 𝑩𝑬𝑻𝑻𝑰𝑵𝑮 𝑵𝑬�
 
 ━━━━━━━━━━━━━━
 
-{label}
+👑 {label}
 
-{countdown}
+⏱️ {countdown}
 
 ━━━━━━━━━━━━━━
 
@@ -2591,7 +2751,7 @@ The 𝑽𝑨𝑳𝑼𝑬𝑯𝑼𝑵𝑻𝑬𝑹 analytics engine scans hundreds
 
 ⚙️ Expected Goals modelling  
 📉 Market price inefficiencies  
-📡 Sharp odds movement tracking  
+🔋 Sharp odds movement tracking  
 💰 Liquidity signals  
 
 𝗢𝗡𝗟𝗬 𝗧𝗛𝗘 𝗦𝗧𝗥𝗢𝗡𝗚𝗘𝗦𝗧 𝗩𝗔𝗟𝗨𝗘 𝗢𝗣𝗣𝗢𝗥𝗧𝗨𝗡𝗜𝗧𝗜𝗘𝗦 𝗣𝗔𝗦𝗦 𝗧𝗛𝗘 𝗠𝗢𝗗𝗘𝗟 𝗙𝗜𝗟𝗧𝗘𝗥𝗦 𝗔𝗡𝗗 𝗥𝗘𝗔𝗖𝗛 𝗘𝗟𝗜𝗧𝗘 𝗠𝗘𝗠𝗕𝗘𝗥𝗦.
@@ -3169,6 +3329,38 @@ Full access to the 𝑬𝑳𝑰𝑻𝑬 𝑩𝑬𝑻𝑻𝑰𝑵𝑮 𝑵𝑬�
         c.message.chat.id,
         c.message.message_id,
         reply_markup=main_menu()
+    )
+    
+    elif c.data == "referral":
+
+        referral_panel(c.message.chat.id)
+        
+    elif c.data == "top_ref":
+
+        text = """
+👑 𝑽𝑨𝑳𝑼𝑬𝑯𝑼𝑵𝑻𝑬𝑹 𝑻𝑶𝑷 𝑹𝑬𝑭𝑬𝑹𝑹𝑬𝑹𝑺
+
+🥇 SharpHunter — 120 referrals
+🥈 GoalMachine — 97 referrals
+🥉 ValueTrader — 84 referrals
+4️⃣ BetAnalytics — 61 referrals
+5️⃣ OddsSniper — 44 referrals
+"""
+
+    keyboard = InlineKeyboardMarkup()
+
+    keyboard.add(
+        InlineKeyboardButton(
+            "⬅ BACK",
+            callback_data="referral"
+        )
+    )
+
+    bot.edit_message_text(
+        text,
+        c.message.chat.id,
+        c.message.message_id,
+        reply_markup=keyboard
     )
         
 @bot.message_handler(commands=["sendvip"])
