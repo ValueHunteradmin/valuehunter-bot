@@ -833,8 +833,13 @@ def monte_carlo_simulation(home_xg,away_xg,simulations=3000):
 
     for _ in range(simulations):
 
-        hg=np.random.poisson(home_xg)
-        ag=np.random.poisson(away_xg)
+        import random
+
+        home_sim = home_xg * random.uniform(0.90,1.10)
+        away_sim = away_xg * random.uniform(0.90,1.10)
+
+        home_goals = np.random.poisson(home_sim)
+        away_goals = np.random.poisson(away_sim)
 
         if hg>ag:
             home_wins+=1
