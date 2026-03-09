@@ -425,7 +425,6 @@ def get_matches():
 def model_extra_tip(over15_prob, over25_prob, over35_prob, btts_prob):
 
     candidates = []
-    
     best_per_match = {}
 
     if over25_prob > 0.60:
@@ -1479,7 +1478,8 @@ def get_value_bets():
             ).fetchone():
                 continue
 
-            candidates.append({
+            bet_data = {
+                "fixture_id": f["fixture_id"],
                 "match": f"{f['home']} vs {f['away']}",
                 "pick": pick,
                 "prob": prob,
@@ -1487,7 +1487,17 @@ def get_value_bets():
                 "ev": ev,
                 "confidence": confidence,
                 "stake": stake
-            })
+            }
+
+            fid = f["fixture_id"]
+
+            if fid not in best_per_match:
+                best_per_match[fid] = bet_data
+            else:
+                if bet_data["ev"] > best_per_match[fid]["ev"]:
+                    best_per_match[fid] = bet_data
+                    
+    candidates = list(best_per_match.values())
 
     ranked = rank_bets(candidates)
 
