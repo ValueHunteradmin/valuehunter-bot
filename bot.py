@@ -2605,7 +2605,7 @@ def vip_menu_keyboard():
     
 def send_vip_menu(user_id, message_id=None):
     
-    countdown = signal_countdown()
+    label, countdown = signal_timer()
     
     now = datetime.now(pytz.timezone("Europe/Athens")).hour
 
