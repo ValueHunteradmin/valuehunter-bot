@@ -2537,7 +2537,7 @@ def vip_dashboard_keyboard():
     
 def send_vip_dashboard(user_id, message_id=None):
     
-    countdown = signal_countdown()
+    label, countdown = signal_timer()
     
     text = """
 ⚜️ 𝑽𝑨𝑳𝑼𝑬𝑯𝑼𝑵𝑻𝑬𝑹 𝑬𝑳𝑰𝑻𝑬 𝑵𝑬𝑻𝑾𝑶𝑹𝑲
