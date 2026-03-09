@@ -2205,12 +2205,12 @@ def send_signals():
             hour = now.hour
             minute = now.minute
 
-            bets = get_value_bets()
-
             # ---------- ADMIN 17:00 ----------
 
             if hour == 17 and minute <= 2 and not admin_sent_today:
-
+                
+                bets = get_value_bets()
+                
                 if bets:
                     bot.send_message(
                         ADMIN_ID,
@@ -2311,7 +2311,9 @@ Our system scanned hundreds of matches and identified the strongest value opport
             # ---------- VIP 18:00 ----------
 
             if hour == 18 and minute <= 2 and not vip_sent_today:
-
+                
+                bets = get_value_bets()
+                
                 vip_sent_today = True 
                 
                 users = get_vip_users()
