@@ -783,9 +783,22 @@ def poisson_matrix(home_xg,away_xg):
 
             matrix.append((h,a,p))
 
+    # ---------- NORMALIZATION ----------
+
+    total = sum(p for _,_,p in matrix)
+
+    matrix = [(h,a,p/total) for h,a,p in matrix]
+
     return matrix
 
+    # ---------- NORMALIZATION ----------
 
+    total = sum(p for _,_,p in matrix)
+
+    matrix = [(h,a,p/total) for h,a,p in matrix]
+
+    return matrix
+    
 # ---------- MONTE CARLO ----------
 
 def monte_carlo_simulation(home_xg,away_xg,simulations=3000):
