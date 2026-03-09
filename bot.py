@@ -2225,7 +2225,7 @@ def send_signals():
  
             members = random.randint(14,22)
 
-            countdown = signal_countdown()
+            countdown = signal_timer()[1]
 
             users = get_all_users()
 
