@@ -2190,165 +2190,171 @@ def send_signals():
     last_cleanup_day = None
 
     while True:
-        today = datetime.now(tz).date()
+        try:
 
-        if last_cleanup_day != today:
-           clean_sent_bets()
-           last_cleanup_day = today
-        expiry_reminders()
-        grade_results()
-        
-        now = datetime.now(tz)
+            today = datetime.now(tz).date()
 
-        hour = now.hour
-        minute = now.minute
-
-        bets = get_value_bets()
-
-        # ---------- ADMIN 17:00 ----------
-
-        if hour == 17 and minute <= 2 and not admin_sent_today:
-
-            if bets:
-                bot.send_message(
-                    ADMIN_ID,
-                    "ADMIN SIGNALS\n\n" + "\n\n".join(bets[:3])
-                )
-
-            admin_sent_today = True
+            if last_cleanup_day != today:
+               clean_sent_bets()
+               last_cleanup_day = today
+            expiry_reminders()
+            grade_results()
             
-        # ---------- PRE SIGNAL FOMO 17:30 ----------
+            now = datetime.now(tz)
 
-        if hour == 17 and minute == 30:
+            hour = now.hour
+            minute = now.minute
 
-            import random
- 
-            members = random.randint(14,22)
+            bets = get_value_bets()
 
-            countdown = signal_timer()[1]
+            # ---------- ADMIN 17:00 ----------
 
-            users = get_all_users()
+            if hour == 17 and minute <= 2 and not admin_sent_today:
 
-            text = f"""
-        👑 𝑬𝑳𝑰𝑻𝑬 𝑵𝑬𝑻𝑾𝑶𝑹𝑲
-
-        {members} members preparing today's bets.
-
-        ⏳ Signal release in
-        {countdown}
-
-        ⚜️ Elite members are already preparing their positions.
-
-        🔐 Unlock access before the signals are released.
-        """
-            keyboard = InlineKeyboardMarkup()
-
-            keyboard.add(
-                InlineKeyboardButton(
-                    "⚜️ 𝑼𝑵𝑳𝑶𝑪𝑲 𝑽𝑰𝑷 𝑺𝑰𝑮𝑵𝑨𝑳𝑺",
-                    callback_data="elite"
-                )
-            )
-
-            for uid in users:
-
-                if is_vip(uid):
-                    continue
-
-                try:
-                    bot.send_message(uid,text,reply_markup=keyboard)
-                    time.sleep(0.05)
-                except:
-                    pass
-            
-        # ---------- FOMO MESSAGE 17:45 ----------
-
-        if hour == 17 and minute == 45:
-
-            users = get_all_users()
-
-            keyboard = InlineKeyboardMarkup()
-            keyboard.add(
-                InlineKeyboardButton(
-                    "⚜️ 𝑼𝑵𝑳𝑶𝑪𝑲 𝑽𝑰𝑷 𝑺𝑰𝑮𝑵𝑨𝑳𝑺",
-                    callback_data="elite"
-                )
-            )
-
-            text = """
-            ⚜️ 𝑻𝑶𝑫𝑨𝒀'𝑺 𝑽𝑰𝑷 𝑺𝑰𝑮𝑵𝑨𝑳𝑺 𝑨𝑹𝑬 𝑹𝑬𝑨𝑫𝒀
-
-            The 𝑽𝑨𝑳𝑼𝑬𝑯𝑼𝑵𝑻𝑬𝑹 model has finalized today's analysis.
-
-            Our system scanned hundreds of matches and identified the strongest value opportunities.
-
-            ━━━━━━━━━━━━━━
-
-            ⚠️ 𝑽𝑰𝑷 signals will be released at 18:00.(Europe/Athens)🇬🇷
-
-            𝗠𝗘𝗠𝗕𝗘𝗥𝗦 𝗔𝗥𝗘 𝗔𝗟𝗥𝗘𝗔𝗗𝗬 𝗣𝗥𝗘𝗣𝗔𝗥𝗜𝗡𝗚 𝗧𝗢𝗗𝗔𝗬’𝗦 𝗕𝗘𝗧𝗦.
-
-            𝗦𝗘𝗖𝗨𝗥𝗘 𝗔𝗖𝗖𝗘𝗦𝗦 𝗕𝗘𝗙𝗢𝗥𝗘 𝗧𝗛𝗘 𝗥𝗘𝗟𝗘𝗔𝗦𝗘.
-            """
-
-            for uid in users:
-
-                if is_vip(uid):
-                    continue
-
-                try:
+                if bets:
                     bot.send_message(
-                        uid,
-                        text,
-                        reply_markup=keyboard
+                        ADMIN_ID,
+                        "ADMIN SIGNALS\n\n" + "\n\n".join(bets[:3])
                     )
+
+                admin_sent_today = True
+                
+            # ---------- PRE SIGNAL FOMO 17:30 ----------
+
+            if hour == 17 and minute == 30:
+
+                import random
+     
+                members = random.randint(14,22)
+
+                countdown = signal_timer()[1]
+
+                users = get_all_users()
+
+                text = f"""
+👑 𝑬𝑳𝑰𝑻𝑬 𝑵𝑬𝑻𝑾𝑶𝑹𝑲
+
+{members} members preparing today's bets.
+
+⏳ Signal release in
+{countdown}
+
+⚜️ Elite members are already preparing their positions.
+
+🔐 Unlock access before the signals are released.
+"""
+                keyboard = InlineKeyboardMarkup()
+
+                keyboard.add(
+                    InlineKeyboardButton(
+                        "⚜️ 𝑼𝑵𝑳𝑶𝑪𝑲 𝑽𝑰𝑷 𝑺𝑰𝑮𝑵𝑨𝑳𝑺",
+                        callback_data="elite"
+                    )
+                )
+
+                for uid in users:
+
+                    if is_vip(uid):
+                        continue
+
+                    try:
+                        bot.send_message(uid,text,reply_markup=keyboard)
+                        time.sleep(0.05)
+                    except:
+                        pass
+                
+            # ---------- FOMO MESSAGE 17:45 ----------
+
+            if hour == 17 and minute == 45:
+
+                users = get_all_users()
+
+                keyboard = InlineKeyboardMarkup()
+                keyboard.add(
+                    InlineKeyboardButton(
+                        "⚜️ 𝑼𝑵𝑳𝑶𝑪𝑲 𝑽𝑰𝑷 𝑺𝑰𝑮𝑵𝑨𝑳𝑺",
+                        callback_data="elite"
+                    )
+                )
+
+                text = """
+⚜️ 𝑻𝑶𝑫𝑨𝒀'𝑺 𝑽𝑰𝑷 𝑺𝑰𝑮𝑵𝑨𝑳𝑺 𝑨𝑹𝑬 𝑹𝑬𝑨𝑫𝒀
+
+The 𝑽𝑨𝑳𝑼𝑬𝑯𝑼𝑵𝑻𝑬𝑹 model has finalized today's analysis.
+
+Our system scanned hundreds of matches and identified the strongest value opportunities.
+
+━━━━━━━━━━━━━━
+
+⚠️ 𝑽𝑰𝑷 signals will be released at 18:00.(Europe/Athens)🇬🇷
+
+𝗠𝗘𝗠𝗕𝗘𝗥𝗦 𝗔𝗥𝗘 𝗔𝗟𝗥𝗘𝗔𝗗𝗬 𝗣𝗥𝗘𝗣𝗔𝗥𝗜𝗡𝗚 𝗧𝗢𝗗𝗔𝗬’𝗦 𝗕𝗘𝗧𝗦.
+
+𝗦𝗘𝗖𝗨𝗥𝗘 𝗔𝗖𝗖𝗘𝗦𝗦 𝗕𝗘𝗙𝗢𝗥𝗘 𝗧𝗛𝗘 𝗥𝗘𝗟𝗘𝗔𝗦𝗘.
+"""
+
+                for uid in users:
+
+                    if is_vip(uid):
+                        continue
+
+                    try:
+                        bot.send_message(
+                            uid,
+                            text,
+                            reply_markup=keyboard
+                        )
+                        time.sleep(0.05)
+                    except:
+                        pass
+                        
+            # ---------- VIP 18:00 ----------
+
+            if hour == 18 and minute <= 2 and not vip_sent_today:
+
+                vip_sent_today = True 
+                
+                users = get_vip_users()
+
+                for uid, plan in users:
+
+                    if plan == "BASIC":
+                        picks = bets[:1]
+
+                    elif plan in ["PRO","DAY"]:
+                        picks = bets[:3]
+                    else:
+                        continue
+
+                    text = "🎖️ VIP SIGNALS\n\n" + "\n\n".join(picks)
+
+                    bot.send_message(uid, text)
                     time.sleep(0.05)
-                except:
-                    pass
-                    
-        # ---------- VIP 18:00 ----------
 
-        if hour == 18 and minute <= 2 and not vip_sent_today:
+                vip_sent_today = True
 
-            vip_sent_today = True 
+            # reset κάθε μέρα
+
+            if hour == 0 and minute == 0:
+                admin_sent_today = False
+                vip_sent_today = False
+
+            time.sleep(30)
             
-            users = get_vip_users()
+            # ---------- MONTHLY REPORT ----------
 
-            for uid, plan in users:
+            if now.day == 1 and hour == 12 and minute == 0:
 
-                if plan == "BASIC":
-                    picks = bets[:1]
+                report = monthly_report()
 
-                elif plan in ["PRO","DAY"]:
-                    picks = bets[:3]
-                else:
-                    continue
+                send_secure_message(
+                    ADMIN_ID,
+                    report
+                )
 
-                text = "🎖️ VIP SIGNALS\n\n" + "\n\n".join(picks)
-
-                bot.send_message(uid, text)
-                time.sleep(0.05)
-
-            vip_sent_today = True
-
-        # reset κάθε μέρα
-
-        if hour == 0 and minute == 0:
-            admin_sent_today = False
-            vip_sent_today = False
-
-        time.sleep(30)
-        
-        # ---------- MONTHLY REPORT ----------
-
-        if now.day == 1 and hour == 12 and minute == 0:
-
-            report = monthly_report()
-
-            send_secure_message(
-                ADMIN_ID,
-                report
-            )
+        except Exception as e:
+            print("SEND SIGNALS ERROR:", e)
+            time.sleep(30)
 # ---------- SECURE SEND MESSAGE ----------
 
 def send_secure_message(user_id, text):
