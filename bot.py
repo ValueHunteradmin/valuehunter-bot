@@ -1275,6 +1275,16 @@ def get_value_bets():
 
         home_attack, home_defense = stats_home
         away_attack, away_defense = stats_away
+        
+        # ---------- LEAGUE NORMALIZATION ----------
+
+        league_avg = league_average()
+
+        home_attack = home_attack / league_avg
+        away_attack = away_attack / league_avg
+
+        home_defense = home_defense / league_avg
+        away_defense = away_defense / league_avg
 
         home_attack -= get_injuries(f["home_id"]) * 0.05
         away_attack -= get_injuries(f["away_id"]) * 0.05
