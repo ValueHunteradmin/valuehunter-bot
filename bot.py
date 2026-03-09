@@ -1456,6 +1456,12 @@ def get_value_bets():
                 (edge * 200) +
                 (ev * 100)
             )
+            
+            model_score = (
+                ev * 0.40 +
+                prob * 0.35 +
+               (confidence / 100) * 0.25
+            )
 
             # ideal odds range bonus
             if 1.75 <= odds_value <= 2.05:
@@ -1486,7 +1492,8 @@ def get_value_bets():
                 "odds": odds_value,
                 "ev": ev,
                 "confidence": confidence,
-                "stake": stake
+                "stake": stake,
+                "score": model_score
             }
 
             fid = f["fixture_id"]
@@ -1518,26 +1525,24 @@ def get_value_bets():
 
     if super_safe:
         
-    cursor.execute(
-        "INSERT INTO sent_bets VALUES (?)",
-        (bet_key,)
-    )
-
-    db.commit()
-    
-    cursor.execute(
-        "INSERT INTO bets_history(fixture_id,match,pick,odds,result,timestamp) VALUES (?,?,?,?,?,?)",
-        (
-            f["fixture_id"],
-            f"{f['home']} vs {f['away']}",
-            pick,
-            odds_value,
-            "PENDING",
-            int(time.time())
+        cursor.execute(
+            "INSERT INTO sent_bets VALUES (?)",
+            (bet_key,)
         )
-    )
 
-    db.commit()
+        db.commit()
+    
+        cursor.execute(
+            "INSERT INTO bets_history(fixture_id,match,pick,odds,result,timestamp) VALUES (?,?,?,?,?,?)",
+            (
+                super_safe["fixture_id"],
+                super_safe["match"],
+                super_safe["pick"],
+                super_safe["odds"],
+                "PENDING",
+                int(time.time())
+            )
+        )
 
         signals.append(
 f"""⭐ 𝑽𝑨𝑳𝑼𝑬𝑯𝑼𝑵𝑻𝑬𝑹 𝑺𝑼𝑷𝑬𝑹 𝑺𝑨𝑭𝑬
@@ -1564,27 +1569,26 @@ Value Edge: {round(super_safe['ev']*100,1)}%
 
     for bet in high_value[:2]:
         
-    cursor.execute(
-        "INSERT INTO sent_bets VALUES (?)",
-        (f"{bet['match']}_{bet['pick']}",)
-    )
-
-    db.commit()
-    
-    cursor.execute(
-        "INSERT INTO bets_history(fixture_id,match,pick,odds,result,timestamp) VALUES (?,?,?,?,?,?)",
-        (
-            f["fixture_id"],
-            f"{f['home']} vs {f['away']}",
-            pick,
-            odds_value,
-            "PENDING",
-            int(time.time())
+        cursor.execute(
+            "INSERT INTO sent_bets VALUES (?)",
+            (f"{bet['match']}_{bet['pick']}",)
         )
-    )
 
-    db.commit()
+        db.commit()
+    
+        cursor.execute(
+            "INSERT INTO bets_history(fixture_id,match,pick,odds,result,timestamp) VALUES (?,?,?,?,?,?)",
+            (
+                bet["fixture_id"],
+                bet["match"],
+                bet["pick"],
+                bet["odds"],
+                "PENDING",
+                int(time.time())
+            )
+        )
 
+        db.commit()
         signals.append(
 f"""🔥 𝑽𝑨𝑳𝑼𝑬𝑯𝑼𝑵𝑻𝑬𝑹 𝑯𝑰𝑮𝑯 𝑽𝑨𝑳𝑼𝑬
 
