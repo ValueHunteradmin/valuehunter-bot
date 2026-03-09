@@ -1346,12 +1346,6 @@ def get_value_bets():
 
         for market, prob, odds_value, line in markets:
             
-            # ---------- PROBABILITY STABILITY FILTER ----------
-            expected_range = 0.45 + (total_xg - 2.2) * 0.08
-
-            if prob > expected_range + 0.15:
-                continue
-            
             # ---------- ODDS RANGE FILTER ----------
 
             if odds_value < 1.50 or odds_value > 2.80:
@@ -1368,28 +1362,7 @@ def get_value_bets():
             
             # ---------- SHARP MARKET FILTER ----------
 
-            if abs(prob - market_prob) > 0.12:
-                continue
-
             if prob - market_prob < 0.04:
-                continue
-
-            if not liquidity_filter(
-                f["league_id"],
-                odds_value
-            ):
-                continue
-
-            if not market_efficiency_detector(
-                prob,
-                odds_value
-            ):
-                continue
-
-            if not market_consensus_filter(
-                prob,
-                odds_value
-            ):
                 continue
             
             # ---------- PROBABILITY STABILITY FILTER ----------
@@ -1513,7 +1486,7 @@ Value Edge: {round(super_safe['ev']*100,1)}%
 💰 Stake
 {round(super_safe['stake']*100,1)}% bankroll
 """
-)
+            )
 
     for bet in high_value[:2]:
 
@@ -1538,32 +1511,32 @@ Value Edge: {round(bet['ev']*100,1)}%
 💰 Stake
 {round(bet['stake']*100,1)}% bankroll
 """
-)
+            )
         
-    # ---------- FALLBACK BET ----------
+        # ---------- FALLBACK SYSTEM ----------
+
     if not signals and candidates:
 
-        bet = ranked[0]
+        fallback = sorted(candidates, key=lambda x: x["ev"], reverse=True)
 
-        signals.append(
-f"""🔥 𝑽𝑨𝑳𝑼𝑬 𝑩𝑬𝑻
+        for bet in fallback[:2]:
+
+            signals.append(
+f"""⚠️ VALUE SCAN FALLBACK
 
 ⚽ {bet['match']}
-🎯 {bet['pick']}
-📊 Odds {round(bet['odds'],2)}
-📈 Probability {round(bet['prob']*100)}%
-💰 Value {round(bet['ev'],2)}
-"""
-)
 
-    league_odds_cache.clear()
-    team_stats_cache.clear()
-    injury_cache.clear()
-    value_cache = signals
-    value_cache_time = time.time()
-    
+🎯 {bet['pick']}
+
+📊 Odds {round(bet['odds'],2)}
+
+📈 Probability {round(bet['prob']*100)}%
+
+💰 Value {round(bet['ev'],3)}
+"""
+            )
+
     return signals
-    
 # ================= DAILY SAMPLE =================
 
 def daily_sample(user_id):
