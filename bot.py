@@ -1525,6 +1525,8 @@ def get_value_bets():
 
     if super_safe:
         
+        bet_key = f"{super_safe['fixture_id']}_{super_safe['pick']}"
+        
         cursor.execute(
             "INSERT INTO sent_bets VALUES (?)",
             (bet_key,)
@@ -1568,6 +1570,8 @@ Value Edge: {round(super_safe['ev']*100,1)}%
             )
 
     for bet in high_value[:2]:
+        
+        bet_key = f"{bet['fixture_id']}_{bet['pick']}"
         
         cursor.execute(
             "INSERT INTO sent_bets VALUES (?)",
