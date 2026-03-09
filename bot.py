@@ -1493,26 +1493,50 @@ def get_value_bets():
     if super_safe:
 
         signals.append(
-f"""⭐ 𝑺𝑼𝑷𝑬𝑹 𝑺𝑨𝑭𝑬 𝑩𝑬𝑻
+f"""⭐ 𝑽𝑨𝑳𝑼𝑬𝑯𝑼𝑵𝑻𝑬𝑹 𝑺𝑼𝑷𝑬𝑹 𝑺𝑨𝑭𝑬
+
 ⚽ {super_safe['match']}
-🎯 {super_safe['pick']}
-📊 Odds {round(super_safe['odds'],2)}
-📈 Probability {round(super_safe['prob']*100)}%
-💰 Value {round(super_safe['ev'],2)}
-💵 Stake {round(super_safe['stake']*100,1)}% bankroll
+
+🎯 PICK
+{super_safe['pick']}
+
+📊 ODDS
+{round(super_safe['odds'],2)}
+
+━━━━━━━━━━━━━━
+
+📈 MODEL DATA
+
+Probability: {round(super_safe['prob']*100)}%
+Value Edge: {round(super_safe['ev']*100,1)}%
+
+💰 Stake
+{round(super_safe['stake']*100,1)}% bankroll
 """
 )
 
     for bet in high_value[:2]:
 
         signals.append(
-f"""🔥 𝑯𝑰𝑮𝑯 𝑽𝑨𝑳𝑼𝑬
+f"""🔥 𝑽𝑨𝑳𝑼𝑬𝑯𝑼𝑵𝑻𝑬𝑹 𝑯𝑰𝑮𝑯 𝑽𝑨𝑳𝑼𝑬
+
 ⚽ {bet['match']}
-🎯 {bet['pick']}
-📊 Odds {round(bet['odds'],2)}
-📈 Probability {round(bet['prob']*100)}%
-💰 Value {round(bet['ev'],2)}
-💵 Stake {round(bet['stake']*100,1)}% bankroll
+
+🎯 PICK
+{bet['pick']}
+
+📊 ODDS
+{round(bet['odds'],2)}
+
+━━━━━━━━━━━━━━
+
+📈 MODEL DATA
+
+Probability: {round(bet['prob']*100)}%
+Value Edge: {round(bet['ev']*100,1)}%
+
+💰 Stake
+{round(bet['stake']*100,1)}% bankroll
 """
 )
         
@@ -3215,7 +3239,7 @@ The 𝑽𝑨𝑳𝑼𝑬𝑯𝑼𝑵𝑻𝑬𝑹 system focuses on identifying b
 
         if now < 18:
 
-            countdown = signal_countdown()
+            label, countdown = signal_timer()
 
             import random
 
