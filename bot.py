@@ -1397,7 +1397,7 @@ def get_value_bets():
             if prob > 0.85:
                 continue
                 
-            if edge < 0.025 or prob < 0.54:
+            if edge < 0.02 or prob < 0.54:
                 continue
                 
             ev = calculate_ev(prob, odds_value)
