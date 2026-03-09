@@ -1417,40 +1417,49 @@ def get_value_bets():
             implied = implied_probability(odds_value)
 
             edge = prob - implied
-            
+
             market_prob = 1 / odds_value
-            
+
+            # ---------- EDGE FILTER ----------
+
+            if edge < 0.02:
+                continue
+
+            # ---------- EV ----------
+
+            ev = calculate_ev(prob, odds_value)
+
+            if ev <= 0.04:
+                continue
+
+            # ---------- PROBABILITY RANGE ----------
+
+            if prob < 0.54 or prob > 0.85:
+                continue
+
             # ---------- SHARP MARKET FILTER ----------
 
             if prob - market_prob < 0.04:
                 continue
-            
-            # ---------- PROBABILITY STABILITY FILTER ----------
 
-            if prob > 0.85:
-                continue
-                
-            if edge < 0.02 or prob < 0.54:
-                continue
-                
-            ev = calculate_ev(prob, odds_value)
+            # ---------- KELLY STAKE ----------
 
-            # ---------- ODDS MOVEMENT FILTER ----------
-        
             stake = kelly_stake(
                 prob,
                 odds_value
             )
-            
+
             if stake > 0.06:
                 continue
+
+            # ---------- CONFIDENCE ----------
 
             confidence = (
                 (prob * 50) +
                 (edge * 200) +
                 (ev * 100)
             )
-                
+
             # ideal odds range bonus
             if 1.75 <= odds_value <= 2.05:
                 confidence += 6
@@ -1458,9 +1467,6 @@ def get_value_bets():
             # strong probability bonus
             if prob >= 0.62:
                 confidence += 3
-
-            if ev <= 0.04:
-                continue
 
             pick = market
 
@@ -1474,27 +1480,6 @@ def get_value_bets():
                 (bet_key,)
             ).fetchone():
                 continue
-
-            cursor.execute(
-                "INSERT INTO sent_bets VALUES (?)",
-                (bet_key,)
-            )
-
-            db.commit()
-
-            cursor.execute(
-                "INSERT INTO bets_history(fixture_id,match,pick,odds,result,timestamp) VALUES (?,?,?,?,?,?)",
-                (
-                    f["fixture_id"],
-                    f"{f['home']} vs {f['away']}",
-                    pick,
-                    odds_value,
-                    "PENDING",
-                    int(time.time())
-                )
-            )
-
-            db.commit()
 
             candidates.append({
                 "match": f"{f['home']} vs {f['away']}",
@@ -1524,6 +1509,27 @@ def get_value_bets():
     signals = []
 
     if super_safe:
+        
+    cursor.execute(
+        "INSERT INTO sent_bets VALUES (?)",
+        (bet_key,)
+    )
+
+    db.commit()
+    
+    cursor.execute(
+        "INSERT INTO bets_history(fixture_id,match,pick,odds,result,timestamp) VALUES (?,?,?,?,?,?)",
+        (
+            f["fixture_id"],
+            f"{f['home']} vs {f['away']}",
+            pick,
+            odds_value,
+            "PENDING",
+            int(time.time())
+        )
+    )
+
+    db.commit()
 
         signals.append(
 f"""⭐ 𝑽𝑨𝑳𝑼𝑬𝑯𝑼𝑵𝑻𝑬𝑹 𝑺𝑼𝑷𝑬𝑹 𝑺𝑨𝑭𝑬
@@ -1549,6 +1555,27 @@ Value Edge: {round(super_safe['ev']*100,1)}%
             )
 
     for bet in high_value[:2]:
+        
+    cursor.execute(
+        "INSERT INTO sent_bets VALUES (?)",
+        (f"{bet['match']}_{bet['pick']}",)
+    )
+
+    db.commit()
+    
+    cursor.execute(
+        "INSERT INTO bets_history(fixture_id,match,pick,odds,result,timestamp) VALUES (?,?,?,?,?,?)",
+        (
+            f["fixture_id"],
+            f"{f['home']} vs {f['away']}",
+            pick,
+            odds_value,
+            "PENDING",
+            int(time.time())
+        )
+    )
+
+    db.commit()
 
         signals.append(
 f"""🔥 𝑽𝑨𝑳𝑼𝑬𝑯𝑼𝑵𝑻𝑬𝑹 𝑯𝑰𝑮𝑯 𝑽𝑨𝑳𝑼𝑬
