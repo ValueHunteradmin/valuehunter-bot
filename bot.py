@@ -1241,7 +1241,13 @@ def grade_results():
                     time.sleep(0.05)
                 except:
                     pass
-                    
+# ---------- LEAGUE AVERAGE ----------
+
+def league_average():
+
+    # fallback value if data missing
+    return 2.6
+    
 # ---------- VALUE ENGINE ----------
 
 def get_value_bets():
