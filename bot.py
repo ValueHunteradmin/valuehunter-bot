@@ -712,9 +712,35 @@ def get_team_stats(team_id,league_id):
         return None
 
     d=r["response"]
+    
+    # ---------- SHOTS DATA ----------
+    shots_total = float(d["shots"]["total"])
+    shots_on = float(d["shots"]["on"])
 
-    attack=float(d["goals"]["for"]["average"]["total"])
-    defense=float(d["goals"]["against"]["average"]["total"])
+    shots_against = float(d["shots"]["against"]["total"])
+    shots_against_on = float(d["shots"]["against"]["on"])
+    
+    # ---------- SHOTS DATA SAFE ----------
+    try:
+        shots_total=float(d["shots"]["total"])
+        shots_on=float(d["shots"]["on"])
+    except:
+        shots_total=0
+        shots_on=0
+
+    try:
+        shots_against=float(d["shots"]["against"]["total"])
+        shots_against_on=float(d["shots"]["against"]["on"])
+    except:
+        shots_against=0
+        shots_against_on=0
+    
+    # ---------- PSEUDO XG ----------
+    xg_est = shots_on * 0.30 + shots_total * 0.05
+    xga_est = shots_against_on * 0.30 + shots_against * 0.05
+
+    attack = xg_est
+    defense = xga_est
 
     team_stats_cache[team_id]=(attack,defense)
 
