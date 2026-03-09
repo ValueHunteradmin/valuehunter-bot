@@ -425,6 +425,8 @@ def get_matches():
 def model_extra_tip(over15_prob, over25_prob, over35_prob, btts_prob):
 
     candidates = []
+    
+    best_per_match = {}
 
     if over25_prob > 0.60:
         candidates.append(("Over 2.5", over25_prob))
@@ -517,10 +519,6 @@ def dev_engine(chat_id):
             odds = lines[3]
         except:
             continue
-
-        confidence = random.randint(78,92)
-        steam = random.choice(["LOW","MEDIUM","HIGH"])
-        clv = round(random.uniform(3,10),1)
 
         # placeholder probabilities (μόνο για dev)
         over15_prob = random.uniform(0.65,0.85)
