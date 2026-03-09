@@ -1500,11 +1500,8 @@ f"""⭐ 𝑺𝑼𝑷𝑬𝑹 𝑺𝑨𝑭𝑬 𝑩𝑬𝑻
 📈 Probability {round(super_safe['prob']*100)}%
 💰 Value {round(super_safe['ev'],2)}
 💵 Stake {round(super_safe['stake']*100,1)}% bankroll
-
-{super_safe['early']}
-
-💸 Bet: 50€"""
-        )
+"""
+)
 
     for bet in high_value[:2]:
 
@@ -1516,9 +1513,8 @@ f"""🔥 𝑯𝑰𝑮𝑯 𝑽𝑨𝑳𝑼𝑬
 📈 Probability {round(bet['prob']*100)}%
 💰 Value {round(bet['ev'],2)}
 💵 Stake {round(bet['stake']*100,1)}% bankroll
-
-💸 Bet: 50€"""
-        )
+"""
+)
         
     # ---------- FALLBACK BET ----------
     if not signals and candidates:
@@ -1533,9 +1529,8 @@ f"""🔥 𝑽𝑨𝑳𝑼𝑬 𝑩𝑬𝑻
 📊 Odds {round(bet['odds'],2)}
 📈 Probability {round(bet['prob']*100)}%
 💰 Value {round(bet['ev'],2)}
-
-💸 Bet: 50€"""
-    )
+"""
+)
 
     league_odds_cache.clear()
     team_stats_cache.clear()
