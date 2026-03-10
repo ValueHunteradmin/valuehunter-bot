@@ -35,7 +35,7 @@ DEFAULT_STAKE = 50
 WEBHOOK_URL = "https://valuehunter-bot-production.up.railway.app/payment-webhook"
 
 # - Channel automation config -
-CHANNEL_ID = -1003799918417   # Set via /setchannel command
+CHANNEL_ID = -1003799918417 # Set via /setchannel command
 
 # - Referral fake data -
 referrer_cache = None
@@ -242,6 +242,47 @@ CREATE TABLE IF NOT EXISTS win_streaks(
     timestamp INTEGER
 )
 """)
+
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS clv_tracking(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    fixture_id INTEGER,
+    market TEXT,
+    opening_odds REAL,
+    closing_odds REAL,
+    clv_pct REAL,
+    timestamp INTEGER
+)
+""")
+
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS engine_logs(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    event TEXT,
+    detail TEXT,
+    timestamp INTEGER
+)
+""")
+
+try:
+    cursor.execute("ALTER TABLE bets_history ADD COLUMN market_type TEXT DEFAULT ''")
+except:
+    pass
+
+try:
+    cursor.execute("ALTER TABLE bets_history ADD COLUMN edge REAL DEFAULT 0")
+except:
+    pass
+
+try:
+    cursor.execute("ALTER TABLE bets_history ADD COLUMN closing_odds REAL DEFAULT 0")
+except:
+    pass
+
+try:
+    cursor.execute("ALTER TABLE bets_history ADD COLUMN agreement_level TEXT DEFAULT ''")
+except:
+    pass
 
 db.commit()
 
@@ -1399,6 +1440,236 @@ def odds_drift_filter(fixture_id, market_key, model_prob):
         return False, drift_direction
 
     return True, drift_direction
+
+
+# --- 7.25 MULTI-MODEL AGREEMENT LAYER ---
+
+def xg_tempo_model(home_stats, away_stats, league_id):
+    """Model 2: xG tempo estimation based on shots volume and accuracy."""
+    if not home_stats or not away_stats:
+        return {}
+    h_tempo = (home_stats["shots_total"] * 0.04 + home_stats["shots_on"] * 0.12)
+    a_tempo = (away_stats["shots_total"] * 0.04 + away_stats["shots_on"] * 0.12)
+    h_def_tempo = (away_stats["shots_against"] * 0.04 + away_stats["shots_against_on"] * 0.12)
+    a_def_tempo = (home_stats["shots_against"] * 0.04 + home_stats["shots_against_on"] * 0.12)
+    modifier = LEAGUE_STRENGTH.get(league_id, 1.0)
+    league_avg = LEAGUE_AVG_GOALS
+    home_xg_t = ((h_tempo + h_def_tempo) / 2) / league_avg * modifier + 0.25
+    away_xg_t = ((a_tempo + a_def_tempo) / 2) / league_avg * modifier
+    total_xg = home_xg_t + away_xg_t
+    probs = {}
+    probs["over1_5"] = min(0.95, max(0.20, (total_xg - 1.2) * 0.35 + 0.50))
+    probs["over2_5"] = min(0.90, max(0.15, (total_xg - 2.0) * 0.35 + 0.40))
+    probs["over3_5"] = min(0.80, max(0.10, (total_xg - 2.8) * 0.30 + 0.25))
+    probs["under2_5"] = 1.0 - probs["over2_5"]
+    probs["under3_5"] = 1.0 - probs["over3_5"]
+    probs["btts"] = min(0.85, max(0.20, min(home_xg_t, away_xg_t) * 0.45 + 0.15))
+    probs["home_win"] = min(0.80, max(0.20, 0.45 + (home_xg_t - away_xg_t) * 0.18))
+    return probs
+
+
+def attack_defense_shots_model(home_stats, away_stats, league_id):
+    """Model 3: Attack vs defense shots comparison model."""
+    if not home_stats or not away_stats:
+        return {}
+    h_attack_power = home_stats["shots_on"] / (home_stats["shots_total"] + 1) * home_stats["attack"]
+    a_attack_power = away_stats["shots_on"] / (away_stats["shots_total"] + 1) * away_stats["attack"]
+    h_defense_weakness = away_stats["defense"] / (away_stats["shots_against"] + 1) * 10
+    a_defense_weakness = home_stats["defense"] / (home_stats["shots_against"] + 1) * 10
+    h_expected = (h_attack_power + h_defense_weakness) / 2
+    a_expected = (a_attack_power + a_defense_weakness) / 2
+    league_avg = LEAGUE_AVG_GOALS
+    h_norm = h_expected / league_avg
+    a_norm = a_expected / league_avg
+    total = h_norm + a_norm
+    probs = {}
+    probs["over1_5"] = min(0.95, max(0.20, total * 0.30 + 0.20))
+    probs["over2_5"] = min(0.90, max(0.15, total * 0.25 + 0.05))
+    probs["over3_5"] = min(0.80, max(0.10, total * 0.18 - 0.05))
+    probs["under2_5"] = 1.0 - probs["over2_5"]
+    probs["under3_5"] = 1.0 - probs["over3_5"]
+    probs["btts"] = min(0.85, max(0.20, min(h_norm, a_norm) * 0.50 + 0.10))
+    probs["home_win"] = min(0.80, max(0.20, 0.45 + (h_norm - a_norm) * 0.20))
+    return probs
+
+
+def multi_model_agreement(poisson_probs, tempo_probs, shots_probs, market_key):
+    """Check agreement across three models. Returns (level, blended_prob)."""
+    key_map = {
+        "over15": "over1_5", "over25": "over2_5", "over35": "over3_5",
+        "under25": "under2_5", "under35": "under3_5",
+        "btts": "btts", "home_win": "home_win",
+    }
+    mapped = key_map.get(market_key, market_key)
+    p1 = poisson_probs.get(mapped)
+    p2 = tempo_probs.get(mapped)
+    p3 = shots_probs.get(mapped)
+    available = [p for p in [p1, p2, p3] if p is not None]
+    if len(available) < 2:
+        return "LOW", available[0] if available else 0.50
+    spread = max(available) - min(available)
+    blended = sum(available) / len(available)
+    if spread <= 0.06:
+        return "HIGH", blended
+    elif spread <= 0.12:
+        return "MEDIUM", blended
+    else:
+        return "LOW", blended
+
+
+def synthetic_fair_odds(model_prob):
+    """Calculate fair odds from model probability."""
+    if model_prob <= 0.01:
+        return 100.0
+    return round(1.0 / model_prob, 3)
+
+
+def value_edge_pct(model_prob, market_odds):
+    """Calculate edge percentage."""
+    market_prob = implied_probability(market_odds)
+    return round((model_prob - market_prob) * 100, 2)
+
+
+def bet_timing_filter(fixture_timestamp):
+    """Avoid stale or too-early bets. Returns (passes, quality)."""
+    now = int(time.time())
+    time_to_kick = fixture_timestamp - now
+    if time_to_kick < 900:
+        return False, "STALE"
+    if time_to_kick < 3600:
+        return True, "FAIR"
+    if time_to_kick < 21600:
+        return True, "GOOD"
+    if time_to_kick <= 172800:
+        return True, "EXCELLENT"
+    return True, "GOOD"
+
+
+def bookmaker_consensus_filter(fixture_id, league_id, market_key, direction):
+    """Check if multiple bookmakers support the same direction."""
+    league_odds = league_odds_cache.get(league_id)
+    if not league_odds:
+        return True
+    fixture_odds = league_odds.get(fixture_id)
+    if not fixture_odds:
+        return True
+    return len(fixture_odds) >= 3
+
+
+def rank_bet_score(bet_data):
+    """Comprehensive ranking score."""
+    score = 0.0
+    score += min(bet_data.get("edge", 0) * 150, 20)
+    agreement = bet_data.get("agreement_level", "LOW")
+    if agreement == "HIGH": score += 15
+    elif agreement == "MEDIUM": score += 8
+    sm = bet_data.get("smart_money", {})
+    if sm.get("market_pressure") == "HIGH": score += 10
+    elif sm.get("market_pressure") == "MEDIUM": score += 5
+    if sm.get("sharp_indicator"): score += 7
+    timing = bet_data.get("timing_quality", "GOOD")
+    if timing == "EXCELLENT": score += 8
+    elif timing == "GOOD": score += 5
+    elif timing == "FAIR": score += 2
+    score += bet_data.get("prob", 0) * 20
+    lq = LEAGUE_QUALITY_SCORES.get(bet_data.get("league_id", 0), 5)
+    score += lq
+    return round(score, 2)
+
+
+def build_elite_parlay(signals_data):
+    """Build a parlay from the top ranked signals."""
+    global parlay_cache, parlay_cache_time
+    if time.time() - parlay_cache_time < 900 and parlay_cache:
+        return parlay_cache
+    if not signals_data or len(signals_data) < 2:
+        return None
+    picks = signals_data[:min(3, len(signals_data))]
+    total_odds = 1.0
+    parlay_text = "🎰 𝑽𝑨𝑳𝑼𝑬𝑯𝑼𝑵𝑻𝑬𝑹 𝑬𝑳𝑰𝑻𝑬 𝑷𝑨𝑹𝑳𝑨𝒀\n\n"
+    for i, pick in enumerate(picks, 1):
+        ov = pick.get("odds", 1.50)
+        total_odds *= ov
+        parlay_text += f"{i}. {pick.get('match', '')}\n   {pick.get('pick', '')} @ {round(ov, 2)}\n\n"
+    parlay_text += f"━━━━━━━━━━━━━━\n💰 TOTAL ODDS: {round(total_odds, 2)}\n📊 Selections: {len(picks)}\n"
+    parlay_cache = parlay_text
+    parlay_cache_time = time.time()
+    return parlay_text
+
+
+def log_engine_event(event, detail=""):
+    """Log an engine event."""
+    global engine_log
+    entry = {"event": event, "detail": str(detail)[:200], "time": datetime.now(UTC).isoformat()}
+    engine_log.append(entry)
+    if len(engine_log) > 500:
+        engine_log = engine_log[-250:]
+    try:
+        with db_lock:
+            cursor.execute("INSERT INTO engine_logs(event,detail,timestamp) VALUES(?,?,?)",
+                (event, str(detail)[:200], int(time.time())))
+            db.commit()
+    except:
+        pass
+
+
+def get_marketing_message_gr():
+    """Return a random Greek/English mixed marketing message."""
+    return random.choice(MARKETING_MESSAGES_GR)
+
+
+def marketing_pre_signal_gr():
+    messages = [
+        "To ValueHunter model oloklirose tin analysi.\nTa signals etoimazontai.\n\nVIP members tha ta paroun stis 18:00.",
+        "Simera to engine evrike arketa value opportunities.\nTo pipeline filtrarε ta kalitera.\n\n18:00 signal release.",
+        "Sharp money detected se Liga matches.\nOi odds idi metakinithikan.\n\nElite members etoimazontai.",
+    ]
+    return random.choice(messages)
+
+
+def marketing_vip_closing():
+    return random.choice([
+        "VIP access kleinei meta ta signals.\nSecure your position tora.",
+        "Limited spots sto VIP network.\nMeta tis 18:00 to access kleinei.",
+    ])
+
+
+def marketing_vip_reopening():
+    return random.choice([
+        "VIP access einai anoixto gia simera.\nNees theseis available.",
+        "To ValueHunter network dexetai nea meli.\nActivate your access tora.",
+    ])
+
+
+def performance_panel_30():
+    """Extended performance panel - last 30 bets."""
+    rows = cursor.execute(
+        "SELECT odds, result, clv, model_prob, edge FROM bets_history WHERE result IN ('WIN','LOSE') ORDER BY id DESC LIMIT 30"
+    ).fetchall()
+    if not rows:
+        return "No completed bets yet."
+    wins = sum(1 for r in rows if r[1] == "WIN")
+    losses = sum(1 for r in rows if r[1] == "LOSE")
+    total = wins + losses
+    winrate = (wins / total * 100) if total > 0 else 0
+    profit = 0
+    stake = DEFAULT_STAKE
+    for odds_v, result, clv_val, mp, edge_val in rows:
+        if result == "WIN":
+            profit += (odds_v * stake) - stake
+        else:
+            profit -= stake
+    roi = (profit / (total * stake) * 100) if total > 0 else 0
+    clv_values = [r[2] for r in rows if r[2] and r[2] > 0]
+    avg_clv = round(sum(clv_values) / len(clv_values), 2) if clv_values else 0
+    return f"""📊 PERFORMANCE PANEL (Last 30)
+
+Bets: {total}  W: {wins}  L: {losses}
+Winrate: {winrate:.1f}%
+Profit: {round(profit, 2)} EUR
+ROI: {roi:.1f}%
+Avg CLV: +{avg_clv}%
+"""
 
 
 # ─── 7.22 MASTER VALUE ENGINE ───
@@ -2772,13 +3043,20 @@ Our system scanned hundreds of matches and identified the strongest value opport
                     text = "🎖️ VIP SIGNALS\n\n" + "\n\n".join(picks)
 
                     try:
-                        bot.send_message(uid, text)
+                        bot.send_message(uid, text, protect_content=True)
 
                         # Send bet slip image if available
                         if picks:
                             img = generate_bet_slip_image(picks[0])
                             if img:
-                                bot.send_photo(uid, img)
+                                bot.send_photo(uid, img, protect_content=True)
+
+                        # PRO users get parlay
+                        if plan in ["PRO", "DAY"] and parlay_cache:
+                            try:
+                                bot.send_message(uid, str(parlay_cache), protect_content=True)
+                            except:
+                                pass
                     except:
                         pass
                     time.sleep(0.05)
@@ -4022,6 +4300,67 @@ def defmenu(m):
         "🛠 𝑽𝑨𝑳𝑼𝑬𝑯𝑼𝑵𝑻𝑬𝑹 𝑫𝑬𝑽 𝑷𝑨𝑵𝑬𝑳",
         reply_markup=keyboard
     )
+
+
+@bot.message_handler(commands=["panel30"])
+def panel30_cmd(m):
+    if m.chat.id != ADMIN_ID:
+        return
+    bot.send_message(m.chat.id, performance_panel_30())
+
+
+@bot.message_handler(commands=["enginelog"])
+def enginelog_cmd(m):
+    if m.chat.id != ADMIN_ID:
+        return
+    if not engine_log:
+        bot.send_message(m.chat.id, "No engine logs yet.")
+        return
+    text = "ENGINE LOG (last 10)\n\n"
+    for entry in engine_log[-10:]:
+        text += f"{entry['time'][:19]} | {entry['event']} | {entry['detail'][:60]}\n"
+    bot.send_message(m.chat.id, text)
+
+
+@bot.message_handler(commands=["parlay"])
+def parlay_cmd(m):
+    if m.chat.id != ADMIN_ID:
+        return
+    if parlay_cache:
+        bot.send_message(m.chat.id, str(parlay_cache))
+    else:
+        bot.send_message(m.chat.id, "No parlay available.")
+
+
+@bot.message_handler(commands=["marketing"])
+def marketing_cmd(m):
+    if m.chat.id != ADMIN_ID:
+        return
+    msg = get_marketing_message_gr()
+    if CHANNEL_ID:
+        try:
+            bot.send_message(CHANNEL_ID, msg)
+            bot.send_message(m.chat.id, "Marketing message sent.")
+        except:
+            bot.send_message(m.chat.id, "Failed.")
+    else:
+        bot.send_message(m.chat.id, f"Channel not set. Msg: {msg}")
+
+
+@bot.message_handler(commands=["clvreport"])
+def clvreport_cmd(m):
+    if m.chat.id != ADMIN_ID:
+        return
+    rows = cursor.execute(
+        "SELECT match,pick,odds,clv,model_prob FROM bets_history WHERE clv>0 ORDER BY id DESC LIMIT 15"
+    ).fetchall()
+    if not rows:
+        bot.send_message(m.chat.id, "No CLV data yet.")
+        return
+    text = "CLV REPORT\n\n"
+    for match, pick, odds, clv_val, mp in rows:
+        text += f"{match}\n{pick} @ {odds} | CLV +{clv_val}%\n\n"
+    bot.send_message(m.chat.id, text)
 
 
 # ╔══════════════════════════════════════════════════════════════╗
