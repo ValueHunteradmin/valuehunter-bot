@@ -1,3 +1,4 @@
+
 import random
 from datetime import datetime, timedelta, UTC
 import pytz
@@ -838,8 +839,12 @@ def monte_carlo_simulation(home_xg,away_xg,simulations=3000):
         home_goals = np.random.poisson(home_sim)
         away_goals = np.random.poisson(away_sim)
 
-        if hg>ag:
-            home_wins+=1
+        if home_goals > away_goals:
+            home_wins += 1
+        elif home_goals < away_goals:
+            away_wins += 1
+        else:
+            draws += 1
 
     return home_wins/simulations
 
@@ -1011,34 +1016,6 @@ def get_league_odds(league_id):
 def calculate_ev(prob,odds):
     return (prob*odds)-1
 
-# ---------- MARKET CONSENSUS FILTER ----------
-
-def market_consensus_filter(prob, odds):
-
-    market_prob = 1 / odds
-
-    edge = prob - market_prob
-
-    # μικρό edge → άχρηστο bet
-    if edge < 0.02:
-        return False
-
-    return True
-    
-# ---------- MARKET EFFICIENCY DETECTOR ----------
-
-def market_efficiency_detector(prob, odds):
-
-    market_prob = 1 / odds
-
-    diff = abs(prob - market_prob)
-
-    # αγορά πολύ αποδοτική
-    if diff < 0.015:
-        return False
-
-    return True
-    
 # ---------- LIQUIDITY FILTER ----------
 
 def liquidity_filter(league_id, odds):
@@ -1271,6 +1248,12 @@ def get_value_bets():
 
         stats_home = get_team_stats(f["home_id"], f["league_id"])
         stats_away = get_team_stats(f["away_id"], f["league_id"])
+        
+        home_shots = home_stats["shots_on"] / (home_stats["shots_total"] + 0.01)
+        away_shots = away_stats["shots_on"] / (away_stats["shots_total"] + 0.01)
+
+        if home_shots < 0.25 or away_shots < 0.25:
+            continue
 
         if not stats_home or not stats_away:
             continue
@@ -1288,8 +1271,8 @@ def get_value_bets():
         home_defense = home_defense / league_avg
         away_defense = away_defense / league_avg
 
-        home_attack -= get_injuries(f["home_id"]) * 0.05
-        away_attack -= get_injuries(f["away_id"]) * 0.05
+        home_attack *= (1 - min(home_injuries * 0.04,0.15))
+        away_attack *= (1 - min(away_injuries * 0.04,0.15))
 
         hs, as_ = team_strength(
             home_attack,
@@ -1309,14 +1292,30 @@ def get_value_bets():
         if abs(home_xg - away_xg) > 2.2:
             continue
         
-        xg_diff = abs(home_xg - away_xg)
         total_xg = home_xg + away_xg
-        
-        # ---------- TEMPO FILTER ----------
+        xg_diff = abs(home_xg - away_xg)
 
-        if total_xg < 2.2 or total_xg > 3.8:
-            continue
-            
+        if xg_diff > 2.4:
+        continue
+        
+        
+def tempo_filter(home_xg,away_xg):
+
+    total = home_xg + away_xg
+
+    if total < 1.8:
+        return False
+
+    if total > 4.2:
+        return False
+
+    ratio = home_xg / (away_xg + 0.01)
+
+    if ratio > 4 or ratio < 0.25:
+        return False
+
+    return True
+    
         if xg_diff > 1.6:
             continue
 
@@ -1405,7 +1404,7 @@ def get_value_bets():
             
             # ---------- ODDS RANGE FILTER ----------
 
-            if odds_value < 1.50 or odds_value > 2.80:
+            if odds_value < 1.40 or odds_value > 3.10:
                 continue
                 
             if odds_value < 1.70 and prob < 0.60:
@@ -1416,6 +1415,20 @@ def get_value_bets():
             edge = prob - implied
 
             market_prob = 1 / odds_value
+            
+            value_strength = 0
+
+            if over25_prob > 0.55:
+                value_strength += 1
+
+            if btts_prob > 0.55:
+                value_strength += 1
+
+            if home_win_prob > 0.55:
+                value_strength += 1
+
+            if value_strength == 0:
+                continue
 
             # ---------- EDGE FILTER ----------
 
