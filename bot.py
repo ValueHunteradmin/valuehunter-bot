@@ -2935,6 +2935,7 @@ Share your link and earn rewards when members activate a subscription.
 # ║  PART 11 - AUTO SIGNAL SCHEDULER                            ║
 # ╚══════════════════════════════════════════════════════════════╝
 
+daily_bets_cache = []
 def send_signals():
     tz = pytz.timezone("Europe/Athens")
     admin_sent_today = False
@@ -2957,8 +2958,16 @@ def send_signals():
             minute = now.minute
 
             # ADMIN 17:00
-            if hour == 17 and minute <= 2 and not admin_sent_today:
-                bets = get_value_bets()
+            if hour >= 17 and not admin_sent_today:
+                print("ADMIN SIGNAL TRIGGERED", now)
+                
+                daily_bets_cache = get_value_bets()
+                bets = daily_bets_cache
+                
+                if not bets:
+                    print("NO BETS FOUND")
+                    bets = ["No value bets today"]
+                    
                 if bets:
                     bot.send_message(
                         ADMIN_ID,
@@ -3027,8 +3036,10 @@ Our system scanned hundreds of matches and identified the strongest value opport
                         pass
 
             # VIP 18:00
-            if hour == 18 and minute <= 2 and not vip_sent_today:
-                bets = get_value_bets()
+            if hour >= 18 and not vip_sent_today:
+                print("VIP SIGNAL TRIGGERED", now)
+                
+                bets = daily_bets_cache
                 vip_sent_today = True
                 users = get_vip_users()
 
