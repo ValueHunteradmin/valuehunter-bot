@@ -2988,11 +2988,16 @@ Share your link and earn rewards when members activate a subscription.
 # ╚══════════════════════════════════════════════════════════════╝
 
 daily_bets_cache = []
+
 def send_signals():
+    global daily_bets_cache
     tz = pytz.timezone("Europe/Athens")
     admin_sent_today = False
     vip_sent_today = False
     last_cleanup_day = None
+    
+    fomo_sent_1730 = False
+    fomo_sent_1745 = False
 
     while True:
         try:
@@ -3018,7 +3023,7 @@ def send_signals():
                     print("PRE-SCAN ERROR:", e)
 
             # ADMIN 17:00
-            if hour >= 17 and not admin_sent_today:
+            if hour == 17 and minute <= 5 and not admin_sent_today:
                 print("ADMIN SIGNAL TRIGGERED", now)
                 
                 daily_bets_cache = get_value_bets()
@@ -3036,10 +3041,11 @@ def send_signals():
                 admin_sent_today = True
 
             # PRE SIGNAL FOMO 17:30
-            if hour == 17 and 29 <= minute <= 31:
+            if hour == 17 and 29 <= minute <= 31 and not fomo_sent_1730:
                 members = random.randint(14, 22)
                 countdown = signal_timer()[1]
                 users = get_all_users()
+                fomo_sent_1730 = True
 
                 text = f"""
 👑 𝑬𝑳𝑰𝑻𝑬 𝑵𝑬𝑻𝑾𝑶𝑹𝑲
@@ -3066,10 +3072,11 @@ def send_signals():
                         pass
 
             # FOMO MESSAGE 17:45
-            if hour == 17 and 44 <= minute <= 46:
+            if hour == 17 and 44 <= minute <= 46 and not fomo_sent_1745:
                 users = get_all_users()
                 keyboard = InlineKeyboardMarkup()
                 keyboard.add(InlineKeyboardButton("⚜️ 𝑼𝑵𝑳𝑶𝑪𝑲 𝑽𝑰𝑷 𝑺𝑰𝑮𝑵𝑨𝑳𝑺", callback_data="elite"))
+                fomo_sent_1745 = True
 
                 text = """
 ⚜️ 𝑻𝑶𝑫𝑨𝒀'𝑺 𝑽𝑰𝑷 𝑺𝑰𝑮𝑵𝑨𝑳𝑺 𝑨𝑹𝑬 𝑹𝑬𝑨𝑫𝒀
@@ -3132,10 +3139,12 @@ Our system scanned hundreds of matches and identified the strongest value opport
                         pass
                     time.sleep(0.05)
 
-            # Reset daily
+            # Reset daily flags
             if hour == 0 and minute == 0:
                 admin_sent_today = False
                 vip_sent_today = False
+                fomo_sent_1730 = False
+                fomo_sent_1745 = False
 
             # MONTHLY REPORT
             if now.day == 1 and hour == 12 and minute == 0:
@@ -3147,7 +3156,6 @@ Our system scanned hundreds of matches and identified the strongest value opport
         except Exception as e:
             print("SEND SIGNALS ERROR:", e)
             time.sleep(30)
-
 
 def send_secure_message(user_id, text):
     try:
