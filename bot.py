@@ -2000,39 +2000,57 @@ def get_value_bets():
         pressure_str = bet["smart_money"]["market_pressure"]
         sharp_str = "YES 🔥" if bet["smart_money"]["sharp_indicator"] else "NO"
 
-        return f"""{signal_type}
+        return f"""🎖️ 𝑽𝑨𝑳𝑼𝑬𝑯𝑼𝑵𝑻𝑬𝑹 𝑬𝑳𝑰𝑻𝑬 𝑷𝑰𝑪𝑲
 
 ⚽ {bet['match']}
 
-🎯 PICK
+🎯 𝑶𝑭𝑭𝑰𝑪𝑰𝑨𝑳 𝑷𝑰𝑪𝑲
 {bet['pick']}
 
-📊 ODDS
+📊 𝑶𝑫𝑫𝑺
 {round(bet['odds'], 2)}
 
-━━━━━━━━━━━━━━
+👤 User ID: {user_id}
 
-📈 MODEL DATA
+━━━━━━━━━━━━━━━━━━
+
+🌐 𝑴𝑶𝑫𝑬𝑳 𝑫𝑨𝑻𝑨
 
 Probability: {round(bet['prob'] * 100)}%
-Value Edge: {round(bet['ev'] * 100, 1)}%
-CLV Prediction: +{bet['clv_est']}%
+Value Edge: {round(bet['edge'] * 100, 2)}%
+Expected Value: {round(bet['ev'] * 100, 2)}%
 
-⚙️ CONFIDENCE
-{round(bet['confidence'], 1)} - {bet['confidence_tier']}
+⚙️ Confidence Score
+{round(bet['confidence'], 1)} — {bet['confidence_tier']}
 
-━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━━━━
 
-📡 SMART MONEY
+🏆 𝑴𝑨𝑹𝑲𝑬𝑻 𝑬𝑫𝑮𝑬
 
-Steam: {steam_str}
+📉 Opening Odds: {bet.get('opening_odds', 'N/A')}
+💎 Current Odds: {round(bet['odds'], 2)}
+📈 Closing Line Prediction: +{bet['clv_est']}%
+
 Market Pressure: {pressure_str}
+
+━━━━━━━━━━━━━━━━━━
+
+📡 𝑺𝑴𝑨𝑹𝑻 𝑴𝑶𝑵𝑬𝒀
+
+Steam Move: {steam_str}
 Sharp Money: {sharp_str}
 
-💰 Stake
-{round(bet['stake'] * 100, 1)}% bankroll
-"""
+━━━━━━━━━━━━━━━━━━
 
+💰 𝑹𝑬𝑪𝑶𝑴𝑴𝑬𝑵𝑫𝑬𝑫 𝑺𝑻𝑨𝑲𝑬
+{round(bet['stake'] * 100, 1)}% bankroll
+
+━━━━━━━━━━━━━━━━━━
+
+👑 𝑽𝑰𝑷 𝑴𝑶𝑫𝑬𝑳 𝑺𝑰𝑮𝑵𝑨𝑳
+@ValueHunterElite_bot
+@MrMasterlegacy1
+"""
     if super_safe:
         bet_key = f"{super_safe['fixture_id']}_{super_safe['pick']}"
         with db_lock:
