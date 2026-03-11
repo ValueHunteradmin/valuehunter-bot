@@ -1970,16 +1970,18 @@ def get_value_bets():
 
     # ── STEP 13: Rank & Filter ──
     candidates = list(best_per_match.values())
-    candidates.sort(key=lambda x: x["confidence"], reverse=True)
+    candidates.sort(key=lambda x: x["score"], reverse=True)
 
     # Correlation filter: one bet per match
     used_matches = set()
     filtered = []
-    for bet in candidates:
-        if bet["match"] not in used_matches:
-            filtered.append(bet)
-            used_matches.add(bet["match"])
 
+    for bet in candidates:
+        match_id = bet["fixture_id"]
+        if match_id not in used_matches:
+            filtered.append(bet)
+            used_matches.add(match_id)
+            
     # ── STEP 14: Signal Generation ──
     super_safe = None
     high_value = []
@@ -2095,8 +2097,40 @@ f"""⚠️ VALUE SCAN FALLBACK
     value_cache = signals
     value_cache_time = time.time()
     return signals
+    
+# ───────────────────────────────────────
+# ⭐ ADVANCED BET RANKING SYSTEM
+# Syndicate-style scoring model
+# Combines EV + Probability + Confidence + CLV + Smart Money
+# Used for selecting the best bets before signal generation
+# ───────────────────────────────────────
 
+def rank_bet_score(bet):
+    """
+    Advanced ranking score for selecting best bets.
+    Combines probability, EV, confidence, smart money and CLV prediction.
+    """
 
+    prob = bet.get("prob", 0)
+    ev = bet.get("ev", 0)
+    confidence = bet.get("confidence", 0)
+    clv = bet.get("clv_est", 0)
+
+    smart_money = bet.get("smart_money", {})
+    steam = 1 if smart_money.get("steam_move") else 0
+    sharp = 1 if smart_money.get("sharp_indicator") else 0
+
+    score = (
+        ev * 0.35 +
+        prob * 0.30 +
+        (confidence / 100) * 0.20 +
+        (max(clv, 0) / 10) * 0.10 +
+        steam * 0.03 +
+        sharp * 0.02
+    )
+
+    return score
+    
 # ╔══════════════════════════════════════════════════════════════╗
 # ║  PART 8 - SIGNAL DELIVERY & RESULTS                         ║
 # ╚══════════════════════════════════════════════════════════════╝
