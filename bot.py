@@ -2956,6 +2956,14 @@ def send_signals():
             now = datetime.now(tz)
             hour = now.hour
             minute = now.minute
+            
+            # PRE-SCAN WARMUP (16:30–16:59)
+            if hour == 16 and minute >= 30:
+                try:
+                    print("PRE-SCAN WARMUP RUNNING")
+                    get_value_bets()
+                except Exception as e:
+                    print("PRE-SCAN ERROR:", e)
 
             # ADMIN 17:00
             if hour >= 17 and not admin_sent_today:
