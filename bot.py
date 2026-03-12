@@ -285,10 +285,12 @@ try:
 except:
     pass
     
+cursor.execute("""
 CREATE TABLE IF NOT EXISTS signal_messages(
-user_id INTEGER,
-message_id INTEGER
-);
+    user_id INTEGER,
+    message_id INTEGER
+)
+""")
 
 db.commit()
 
