@@ -3334,8 +3334,8 @@ Our system scanned hundreds of matches and identified the strongest value opport
                 vip_sent_today = True
                 users = get_vip_users()
                 
-                    if ADMIN_TEST_MODE:
-                        users.append((ADMIN_ID,ADMIN_TEST_PLAN))
+                if ADMIN_TEST_MODE:
+                    users.append((ADMIN_ID,ADMIN_TEST_PLAN))
 
                 for uid, plan in users:
 
