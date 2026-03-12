@@ -142,160 +142,165 @@ clv_history = {}  # fixture_id -> {opening_odds, closing_odds, clv_pct}
 # ║  PART 2 - DATABASE                                          ║
 # ╚══════════════════════════════════════════════════════════════╝
 
+import sqlite3
+import threading
+
 db_lock = threading.Lock()
 
 db = sqlite3.connect("database.db", check_same_thread=False, timeout=30)
 cursor = db.cursor()
 
-cursor.execute("""
-CREATE TABLE IF NOT EXISTS vip_users(
-    user_id INTEGER PRIMARY KEY,
-    plan TEXT,
-    expire INTEGER
-)
-""")
+with db_lock:
 
-cursor.execute("""
-CREATE TABLE IF NOT EXISTS bets_history(
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    match TEXT,
-    pick TEXT,
-    odds REAL,
-    result TEXT,
-    timestamp INTEGER
-)
-""")
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS vip_users(
+        user_id INTEGER PRIMARY KEY,
+        plan TEXT,
+        expire INTEGER
+    )
+    """)
 
-try:
-    cursor.execute("ALTER TABLE bets_history ADD COLUMN fixture_id INTEGER")
-except:
-    pass
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS bets_history(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        match TEXT,
+        pick TEXT,
+        odds REAL,
+        result TEXT,
+        timestamp INTEGER
+    )
+    """)
 
-try:
-    cursor.execute("ALTER TABLE bets_history ADD COLUMN confidence_tier TEXT DEFAULT 'MEDIUM'")
-except:
-    pass
+    try:
+        cursor.execute("ALTER TABLE bets_history ADD COLUMN fixture_id INTEGER")
+    except:
+        pass
 
-try:
-    cursor.execute("ALTER TABLE bets_history ADD COLUMN clv REAL DEFAULT 0")
-except:
-    pass
+    try:
+        cursor.execute("ALTER TABLE bets_history ADD COLUMN confidence_tier TEXT DEFAULT 'MEDIUM'")
+    except:
+        pass
 
-try:
-    cursor.execute("ALTER TABLE bets_history ADD COLUMN model_prob REAL DEFAULT 0")
-except:
-    pass
+    try:
+        cursor.execute("ALTER TABLE bets_history ADD COLUMN clv REAL DEFAULT 0")
+    except:
+        pass
 
-cursor.execute("""
-CREATE TABLE IF NOT EXISTS sent_bets(
-    key TEXT PRIMARY KEY
-)
-""")
+    try:
+        cursor.execute("ALTER TABLE bets_history ADD COLUMN model_prob REAL DEFAULT 0")
+    except:
+        pass
 
-cursor.execute("""
-CREATE TABLE IF NOT EXISTS free_sample(
-    user_id INTEGER PRIMARY KEY,
-    last_time INTEGER
-)
-""")
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS sent_bets(
+        key TEXT PRIMARY KEY
+    )
+    """)
 
-cursor.execute("""
-CREATE TABLE IF NOT EXISTS expiry_notified(
-    user_id INTEGER PRIMARY KEY
-)
-""")
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS free_sample(
+        user_id INTEGER PRIMARY KEY,
+        last_time INTEGER
+    )
+    """)
 
-cursor.execute("""
-CREATE TABLE IF NOT EXISTS processed_payments(
-    payment_id TEXT PRIMARY KEY
-)
-""")
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS expiry_notified(
+        user_id INTEGER PRIMARY KEY
+    )
+    """)
 
-cursor.execute("""
-CREATE TABLE IF NOT EXISTS users(
-    user_id INTEGER PRIMARY KEY
-)
-""")
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS processed_payments(
+        payment_id TEXT PRIMARY KEY
+    )
+    """)
 
-cursor.execute("""
-CREATE TABLE IF NOT EXISTS referrals(
-    referrer INTEGER,
-    referred INTEGER PRIMARY KEY
-)
-""")
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS users(
+        user_id INTEGER PRIMARY KEY
+    )
+    """)
 
-cursor.execute("""
-CREATE TABLE IF NOT EXISTS referral_stats(
-    user_id INTEGER PRIMARY KEY,
-    count INTEGER DEFAULT 0,
-    unlocked INTEGER DEFAULT 0
-)
-""")
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS referrals(
+        referrer INTEGER,
+        referred INTEGER PRIMARY KEY
+    )
+    """)
 
-cursor.execute("""
-CREATE TABLE IF NOT EXISTS discount_wallet(
-    user_id INTEGER PRIMARY KEY,
-    discount INTEGER DEFAULT 0
-)
-""")
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS referral_stats(
+        user_id INTEGER PRIMARY KEY,
+        count INTEGER DEFAULT 0,
+        unlocked INTEGER DEFAULT 0
+    )
+    """)
 
-cursor.execute("""
-CREATE TABLE IF NOT EXISTS win_streaks(
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    streak_count INTEGER,
-    timestamp INTEGER
-)
-""")
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS discount_wallet(
+        user_id INTEGER PRIMARY KEY,
+        discount INTEGER DEFAULT 0
+    )
+    """)
 
-cursor.execute("""
-CREATE TABLE IF NOT EXISTS clv_tracking(
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    fixture_id INTEGER,
-    market TEXT,
-    opening_odds REAL,
-    closing_odds REAL,
-    clv_pct REAL,
-    timestamp INTEGER
-)
-""")
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS win_streaks(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        streak_count INTEGER,
+        timestamp INTEGER
+    )
+    """)
 
-cursor.execute("""
-CREATE TABLE IF NOT EXISTS engine_logs(
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    event TEXT,
-    detail TEXT,
-    timestamp INTEGER
-)
-""")
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS clv_tracking(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        fixture_id INTEGER,
+        market TEXT,
+        opening_odds REAL,
+        closing_odds REAL,
+        clv_pct REAL,
+        timestamp INTEGER
+    )
+    """)
 
-try:
-    cursor.execute("ALTER TABLE bets_history ADD COLUMN market_type TEXT DEFAULT ''")
-except:
-    pass
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS engine_logs(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        event TEXT,
+        detail TEXT,
+        timestamp INTEGER
+    )
+    """)
 
-try:
-    cursor.execute("ALTER TABLE bets_history ADD COLUMN edge REAL DEFAULT 0")
-except:
-    pass
+    try:
+        cursor.execute("ALTER TABLE bets_history ADD COLUMN market_type TEXT DEFAULT ''")
+    except:
+        pass
 
-try:
-    cursor.execute("ALTER TABLE bets_history ADD COLUMN closing_odds REAL DEFAULT 0")
-except:
-    pass
+    try:
+        cursor.execute("ALTER TABLE bets_history ADD COLUMN edge REAL DEFAULT 0")
+    except:
+        pass
 
-try:
-    cursor.execute("ALTER TABLE bets_history ADD COLUMN agreement_level TEXT DEFAULT ''")
-except:
-    pass
-    
-cursor.execute("""
-CREATE TABLE IF NOT EXISTS signal_messages(
-    user_id INTEGER,
-    message_id INTEGER
-)
-""")
+    try:
+        cursor.execute("ALTER TABLE bets_history ADD COLUMN closing_odds REAL DEFAULT 0")
+    except:
+        pass
 
-db.commit()
+    try:
+        cursor.execute("ALTER TABLE bets_history ADD COLUMN agreement_level TEXT DEFAULT ''")
+    except:
+        pass
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS signal_messages(
+        user_id INTEGER,
+        message_id INTEGER
+    )
+    """)
+
+    db.commit()
 
 # ╔══════════════════════════════════════════════════════════════╗
 # ║  PART 3 - VIP & USER SYSTEM                                 ║
@@ -4892,9 +4897,10 @@ def detect_goals():
 
     while True:
 
-        rows = cursor.execute(
-            "SELECT fixture_id,match FROM bets_history WHERE result='PENDING'"
-        ).fetchall()
+        with db_lock:
+            rows = cursor.execute(
+                "SELECT fixture_id,match FROM bets_history WHERE result='PENDING'"
+            ).fetchall()
 
         for fixture_id, match in rows:
 
@@ -4938,10 +4944,10 @@ Match is LIVE
 
             users = get_vip_users()
 
-            for uid,plan in users:
+            for uid, plan in users:
 
                 try:
-                    bot.send_message(uid,text)
+                    bot.send_message(uid, text)
                 except:
                     pass
 
