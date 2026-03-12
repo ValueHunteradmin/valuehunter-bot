@@ -1576,13 +1576,6 @@ def rank_bet_score(bet_data):
     score += lq
     return round(score, 2)
 
-
-def build_parlay
-        "Sharp money detected se Liga matches.\nOi odds idi metakinithikan.\n\nElite members etoimazontai.",
-    ]
-    return random.choice(messages)
-
-
 def marketing_vip_closing():
     return random.choice([
         "VIP access kleinei meta ta signals.\nSecure your position tora.",
@@ -2117,10 +2110,11 @@ f"""⚠️ VALUE SCAN FALLBACK
     
     # Build Parlay
     global parlay_cache
-    parlay_cache = build_parlay(filtered[:3], candidates)
-    
+    parlay_cache = build_parlay(signals, candidates)
+
     value_cache = signals
     value_cache_time = time.time()
+
     return signals
     
 # ───────────────────────────────────────
@@ -2189,16 +2183,28 @@ def build_parlay(signals_data, candidates):
 
     # 1️⃣ Use signal matches but different market
     for bet in signals_data:
+
         match = bet["match"]
         used_matches.add(match)
 
-        alt_pick = f"Over 1.5 Goals"
+        # Smart alternative market
+        if bet.get("total_xg", 2.5) >= 3.0:
+            alt_pick = "Over 2.5 Goals"
+
+        elif bet.get("total_xg", 2.5) >= 2.2:
+            alt_pick = "Over 1.5 Goals"
+
+        elif bet.get("total_xg", 2.5) <= 2.1:
+            alt_pick = "Under 3.5 Goals"
+
+        else:
+            alt_pick = "BTTS"
 
         if 1.35 <= bet["odds"] <= 2.20:
             parlay_legs.append({
                 "match": match,
                 "pick": alt_pick,
-                "odds": round(min(bet["odds"],1.65),2)
+                "odds": round(min(bet["odds"], 1.65), 2)
             })
 
     # 2️⃣ Find extra matches
@@ -2218,6 +2224,16 @@ def build_parlay(signals_data, candidates):
         if bet["edge"] < 0.03:
             continue
 
+        # 🧠 Syndicate stability filters
+        if bet["confidence"] < 55:
+            continue
+
+        if bet["ev"] < 0.03:
+            continue
+
+        if bet["smart_money"]["market_pressure"] == "LOW":
+            continue
+
         extra_candidates.append(bet)
 
     extra_candidates.sort(key=lambda x: rank_bet_score(x), reverse=True)
@@ -2230,7 +2246,7 @@ def build_parlay(signals_data, candidates):
         parlay_legs.append({
             "match": bet["match"],
             "pick": bet["pick"],
-            "odds": round(bet["odds"],2)
+            "odds": round(bet["odds"], 2)
         })
 
     if len(parlay_legs) < 4:
