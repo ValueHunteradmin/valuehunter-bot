@@ -25,6 +25,9 @@ from io import BytesIO
 TOKEN = "8767848071:AAHjxT7945VO-X7iCI3kG-0fIqC_giqX7Z8"
 ADMIN_ID = 8328070177
 
+ADMIN_TEST_MODE = False
+ADMIN_TEST_PLAN = None
+
 FOOTBALL_API_KEY = "2f8c79b66ceed85aaf20322308f11e5a"
 ODDS_API_KEY = "e55ba3ebd10f1d12494c0c10f1bfdb32"
 NOWPAY_API_KEY = "ZB43Y23-F3E4XKG-K83X2GC-MPAAHZ5"
@@ -315,6 +318,17 @@ def get_vip_users():
     ).fetchall()
 
 def is_vip(user_id):
+
+    if user_id == ADMIN_ID and ADMIN_TEST_MODE:
+        return True
+
+    row = cursor.execute(
+        "SELECT user_id FROM vip_users WHERE user_id=?",
+        (user_id,)
+    ).fetchone()
+
+    return row is not None
+    
     now = int(time.time())
     r = cursor.execute(
         "SELECT expire FROM vip_users WHERE user_id=?",
@@ -3319,6 +3333,9 @@ Our system scanned hundreds of matches and identified the strongest value opport
                 bets = daily_bets_cache
                 vip_sent_today = True
                 users = get_vip_users()
+                
+                    if ADMIN_TEST_MODE:
+                    users.append((ADMIN_ID,ADMIN_TEST_PLAN))
 
                 for uid, plan in users:
 
@@ -3875,7 +3892,54 @@ Full access to the 𝑬𝑳𝑰𝑻𝑬 𝑩𝑬𝑻𝑻𝑰𝑵𝑮 𝑵𝑬�
     )
 
     start_conversion_funnel(m.chat.id)
+    
+@bot.message_handler(commands=['testvip'])
+def admin_testvip(message):
 
+    if message.from_user.id != ADMIN_ID:
+        return
+
+    keyboard = InlineKeyboardMarkup()
+
+    keyboard.add(
+        InlineKeyboardButton("BASIC",callback_data="test_basic"),
+        InlineKeyboardButton("PRO",callback_data="test_pro")
+    )
+
+    keyboard.add(
+        InlineKeyboardButton("DAY",callback_data="test_day")
+    )
+
+    bot.send_message(
+        ADMIN_ID,
+        "🧪 Select VIP plan to simulate",
+        reply_markup=keyboard
+    )
+
+@bot.callback_query_handler(func=lambda c: c.data.startswith("test_"))
+def set_test_plan(call):
+
+    global ADMIN_TEST_MODE
+    global ADMIN_TEST_PLAN
+
+    if call.from_user.id != ADMIN_ID:
+        return
+
+    plan = call.data.split("_")[1].upper()
+
+    ADMIN_TEST_MODE = True
+    ADMIN_TEST_PLAN = plan
+
+    bot.send_message(
+        ADMIN_ID,
+        f"""
+🧪 TEST VIP MODE ACTIVE
+
+Plan: {plan}
+
+You will now receive signals like a real VIP.
+"""
+    )
 
 # ─── CALLBACK HANDLER ───
 
