@@ -1,6 +1,6 @@
 from PIL import Image, ImageDraw, ImageFont
 
-BASE_IMAGE = "assets/valuehunter_base.png"
+BASE_IMAGE = "3E9A201D-103B-404F-B977-BFB521986C93.png"
 
 def get_font(size, bold=False):
     try:
