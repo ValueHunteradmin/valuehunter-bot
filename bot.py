@@ -2439,7 +2439,9 @@ The ValueHunter model once again identified **hidden bookmaker value** before th
             time.sleep(0.05)
         except:
             pass
-
+    
+    img_path = generate_ai_result_image(results)
+    
     # Free user teaser
     free_text = f"""
 🎖️ 𝑽𝑰𝑷 𝑾𝑰𝑵 𝑪𝑶𝑵𝑭𝑰𝑹𝑴𝑬𝑫
@@ -2461,17 +2463,27 @@ The ValueHunter model once again identified **hidden bookmaker value** before th
 
     keyboard = InlineKeyboardMarkup()
     keyboard.add(InlineKeyboardButton("⚜️ 𝑼𝑵𝑳𝑶𝑪𝑲 𝑽𝑰𝑷 𝑨𝑪𝑪𝑬𝑺𝑺", callback_data="elite"))
-
+    
     free_users = get_all_users()
+
     for uid in free_users:
+
         if is_vip(uid):
             continue
+
         try:
-            bot.send_message(uid, free_text, reply_markup=keyboard)
+
+            bot.send_photo(
+                uid,
+                open(img_path,"rb"),
+                caption=free_text,
+                reply_markup=keyboard
+            )
+
             time.sleep(0.05)
+
         except:
             pass
-
 
 # ─── WIN STREAK TRACKER ───
 
@@ -4893,7 +4905,7 @@ Preparing elite result announcement...
             )
         except:
             pass
-
+        
     # δημιουργία εικόνας
     results = []
 
