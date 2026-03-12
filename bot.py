@@ -4874,20 +4874,60 @@ Match is LIVE
 
 def send_results_image(wins,losses):
 
-    img_path = "results.png"
+    total = wins + losses
+
+    # AI announcement message
+    users = get_vip_users()
+
+    for uid,plan in users:
+        try:
+            bot.send_message(
+                uid,
+"""
+🤖 AI ENGINE REPORT
+
+Scanning today's signals...
+
+Preparing elite result announcement...
+"""
+            )
+        except:
+            pass
+
+    # δημιουργία εικόνας
+    results = []
+
+    for i in range(wins):
+        results.append(("Bet","WIN"))
+
+    for i in range(losses):
+        results.append(("Bet","LOSE"))
+
+    img_path = generate_ai_result_image(results)
 
     caption = f"""
-🔥 VALUEHUNTER RESULTS
+🏆 VALUEHUNTER RESULT
 
-{wins}/{wins+losses} WON TODAY
+{wins}/{total} WON TODAY
+
+Elite members continue to beat the market.
+
+Next signals release at 18:00 🇬🇷
 """
 
     keyboard = InlineKeyboardMarkup()
 
     keyboard.add(
         InlineKeyboardButton(
-            "📊 View Result Summary",
-            callback_data="result_summary"
+            "📊 PERFORMANCE",
+            callback_data="performance"
+        )
+    )
+
+    keyboard.add(
+        InlineKeyboardButton(
+            "🎁 REFERRAL PROGRAM",
+            callback_data="referral"
         )
     )
 
