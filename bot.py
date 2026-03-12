@@ -1,3 +1,4 @@
+from modules.image_engine import generate_ai_result_image
 import random
 from datetime import datetime, timedelta, UTC
 import pytz
@@ -4683,6 +4684,40 @@ def show_result_summary(call):
     )
 
     bot.send_message(call.message.chat.id,text,reply_markup=keyboard)
+    
+@bot.callback_query_handler(func=lambda c: c.data=="performance")
+def show_performance(call):
+
+    text = performance()
+
+    bot.send_message(
+        call.message.chat.id,
+        text
+    )
+
+
+@bot.callback_query_handler(func=lambda c: c.data=="referral")
+def show_referral(call):
+
+    user_id = call.from_user.id
+
+    text = f"""
+🎁 VALUEHUNTER REFERRAL
+
+Invite friends and earn rewards.
+
+For every VIP member you refer
+you receive bonus access.
+
+Your referral link:
+
+https://t.me/ValueHunterElite_bot?start={user_id}
+"""
+
+    bot.send_message(
+        call.message.chat.id,
+        text
+    )
     
 # ───────────────────────────────────────
 # LIVE MATCH TRACKER
