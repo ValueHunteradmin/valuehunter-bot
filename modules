@@ -1,0 +1,68 @@
+from PIL import Image, ImageDraw, ImageFont
+import os
+
+BASE_IMAGE = "assets/valuehunter_base.png"
+
+FONT_TITLE = "fonts/Montserrat-Bold.ttf"
+FONT_TEXT = "fonts/Montserrat-Regular.ttf"
+
+
+def generate_ai_result_image(results):
+
+    img = Image.open(BASE_IMAGE).convert("RGBA")
+    draw = ImageDraw.Draw(img)
+
+    font_header = ImageFont.truetype(FONT_TITLE, 50)
+    font_bet = ImageFont.truetype(FONT_TEXT, 40)
+    font_title = ImageFont.truetype(FONT_TITLE, 70)
+    font_score = ImageFont.truetype(FONT_TITLE, 60)
+
+    # AI HEADER
+    draw.text(
+        (300,120),
+        "AI SIGNAL ENGINE REPORT",
+        (255,215,0),
+        font=font_header
+    )
+
+    y = 420
+    wins = 0
+
+    for i,(bet,result) in enumerate(results):
+
+        if result == "WIN":
+            text = f"⚽ Bet {i+1} — WIN ✅"
+            wins += 1
+        else:
+            text = f"⚽ Bet {i+1} — LOST ❌"
+
+        draw.text((220,y),text,(255,255,255),font=font_bet)
+        y += 70
+
+    total = len(results)
+
+    if wins == total:
+        title = "PERFECT DAY"
+        subtitle = "+PROFIT"
+    elif wins >= 2:
+        title = "PROFITABLE DAY"
+        subtitle = "+PROFIT"
+    elif wins == 1:
+        title = "BREAK EVEN"
+        subtitle = "1 / 3 WON"
+    else:
+        title = "TOUGH DAY"
+        subtitle = "LOSS"
+
+    draw.text((350,680),title,(255,215,0),font=font_title)
+
+    score = f"{wins} / {total} WON"
+
+    draw.text((420,760),score,(255,255,255),font=font_score)
+
+    draw.text((470,830),subtitle,(0,255,120),font=font_bet)
+
+    path = "result_image.png"
+    img.save(path)
+
+    return path
