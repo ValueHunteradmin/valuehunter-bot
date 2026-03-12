@@ -283,6 +283,11 @@ try:
     cursor.execute("ALTER TABLE bets_history ADD COLUMN agreement_level TEXT DEFAULT ''")
 except:
     pass
+    
+CREATE TABLE IF NOT EXISTS signal_messages(
+user_id INTEGER,
+message_id INTEGER
+);
 
 db.commit()
 
@@ -2347,13 +2352,53 @@ def grade_results():
             )
             db.commit()
 
-        # ── WIN NOTIFICATION ──
+        # ── RESULT UPDATE SYSTEM ──
+
+        try:
+
+            # update the original VIP signal message
+            rows_msg = cursor.execute(
+                "SELECT user_id,message_id FROM signal_messages"
+            ).fetchall()
+
+            for uid,msg_id in rows_msg:
+
+                status_icon = "🟢 WIN" if outcome == "WIN" else "🔴 LOSS"
+
+                updated_text = f"""
+        🎖️ 𝑽𝑨𝑳𝑼𝑬𝑯𝑼𝑵𝑻𝑬𝑹 𝑬𝑳𝑰𝑻𝑬 𝑹𝑬𝑺𝑼𝑳𝑻
+
+        ⚽ {match}
+        🎯 {pick}
+
+        📊 Odds {odds}
+
+        ━━━━━━━━━━━━━━
+
+        📊 Result: {status_icon}
+
+        ValueHunter model result update
+        """
+
+                try:
+                    bot.edit_message_text(
+                        updated_text,
+                        uid,
+                        msg_id
+                    )
+                except:
+                    pass
+
+        except:
+            pass
+
+
+        # ── NORMAL RESULT NOTIFICATION ──
+
         if outcome == "WIN":
             _send_win_notification(match, pick, odds)
-            _check_win_streak()
 
-        # ── LOSS NOTIFICATION (optional for VIP) ──
-
+        _check_win_streak()
 
 def _send_win_notification(match, pick, odds):
     """Send win confirmation to VIP and teaser to free users."""
@@ -3261,32 +3306,64 @@ Our system scanned hundreds of matches and identified the strongest value opport
                 users = get_vip_users()
 
                 for uid, plan in users:
+
                     if plan == "BASIC":
                         picks = bets[:1]
+
                     elif plan in ["PRO", "DAY"]:
                         picks = bets[:3]
+
                     else:
                         continue
 
                     text = "🎖️ VIP SIGNALS\n\n" + "\n\n".join(picks)
 
-                    try:
-                        bot.send_message(uid, text, protect_content=True)
+                    # VIP buttons
+                    keyboard = InlineKeyboardMarkup()
 
-                        # Send bet slip image if available
+                    keyboard.add(
+                        InlineKeyboardButton("📊 Match Insight", callback_data="match_insight")
+                    )
+
+                    if plan in ["PRO","DAY"]:
+                        keyboard.add(
+                            InlineKeyboardButton("🎁 Referral Program", callback_data="referral")
+                        )
+
+                    try:
+                        msg = bot.send_message(
+                            uid,
+                            text,
+                            reply_markup=keyboard,
+                            protect_content=True
+                        )
+
+                        # store message id for live updates
+                        try:
+                            cursor.execute(
+                                "INSERT INTO signal_messages(user_id,message_id) VALUES (?,?)",
+                                (uid,msg.message_id)
+                            )
+                            db.commit()
+                        except:
+                            pass
+
+                        # Send bet slip image
                         if picks:
                             img = generate_bet_slip_image(picks[0])
                             if img:
                                 bot.send_photo(uid, img, protect_content=True)
 
                         # PRO users get parlay
-                        if plan in ["PRO", "DAY"] and parlay_cache:
+                        if plan in ["PRO","DAY"] and parlay_cache:
                             try:
                                 bot.send_message(uid, str(parlay_cache), protect_content=True)
                             except:
                                 pass
+
                     except:
                         pass
+
                     time.sleep(0.05)
 
             # Reset daily flags
@@ -4591,12 +4668,244 @@ def clvreport_cmd(m):
         text += f"{match}\n{pick} @ {odds} | CLV +{clv_val}%\n\n"
     bot.send_message(m.chat.id, text)
 
+@bot.callback_query_handler(func=lambda c: c.data=="result_summary")
+def show_result_summary(call):
+
+    text = result_summary_text()
+
+    keyboard = InlineKeyboardMarkup()
+
+    keyboard.add(
+        InlineKeyboardButton(
+            "🎁 Referral Program",
+            callback_data="referral"
+        )
+    )
+
+    bot.send_message(call.message.chat.id,text,reply_markup=keyboard)
+    
+# ───────────────────────────────────────
+# LIVE MATCH TRACKER
+# Updates VIP message with live status
+# ───────────────────────────────────────
+
+def update_live_matches():
+
+    while True:
+
+        rows = cursor.execute(
+            "SELECT id,fixture_id,match,pick,odds,result FROM bets_history WHERE result='PENDING'"
+        ).fetchall()
+
+        for bet_id, fixture_id, match, pick, odds, result in rows:
+
+            if not fixture_id:
+                continue
+
+            url = f"https://v3.football.api-sports.io/fixtures?id={fixture_id}"
+            headers = {"x-apisports-key": FOOTBALL_API_KEY}
+
+            try:
+                r = requests.get(url, headers=headers, timeout=10).json()
+            except:
+                continue
+
+            if not r.get("response"):
+                continue
+
+            game = r["response"][0]
+
+            status = game["fixture"]["status"]["short"]
+            minute = game["fixture"]["status"]["elapsed"]
+
+            home = game["teams"]["home"]["name"]
+            away = game["teams"]["away"]["name"]
+
+            home_goals = game["goals"]["home"]
+            away_goals = game["goals"]["away"]
+
+            if status in ["1H","2H"]:
+
+                status_text = f"🏟 LIVE {minute}'"
+
+            elif status == "HT":
+
+                status_text = "⏸ HT"
+
+            else:
+
+                status_text = "⏳ Pending"
+
+            rows_msg = cursor.execute(
+                "SELECT user_id,message_id FROM signal_messages"
+            ).fetchall()
+
+            for uid,msg_id in rows_msg:
+
+                try:
+
+                    new_text = f"""
+🎖️ VIP SIGNAL UPDATE
+
+⚽ {match}
+🎯 {pick}
+
+📊 Odds {odds}
+
+Status: {status_text}
+
+Score: {home_goals}-{away_goals}
+"""
+
+                    bot.edit_message_text(
+                        new_text,
+                        uid,
+                        msg_id
+                    )
+
+                except:
+                    pass
+
+        time.sleep(60)
+
+# ───────────────────────────────────────
+# GOAL ALERT SYSTEM
+# ───────────────────────────────────────
+
+goal_cache = {}
+
+def detect_goals():
+
+    while True:
+
+        rows = cursor.execute(
+            "SELECT fixture_id,match FROM bets_history WHERE result='PENDING'"
+        ).fetchall()
+
+        for fixture_id, match in rows:
+
+            url = f"https://v3.football.api-sports.io/fixtures?id={fixture_id}"
+            headers = {"x-apisports-key": FOOTBALL_API_KEY}
+
+            try:
+                r = requests.get(url, headers=headers, timeout=10).json()
+            except:
+                continue
+
+            if not r.get("response"):
+                continue
+
+            game = r["response"][0]
+
+            home = game["teams"]["home"]["name"]
+            away = game["teams"]["away"]["name"]
+
+            home_goals = game["goals"]["home"]
+            away_goals = game["goals"]["away"]
+
+            key = f"{fixture_id}"
+
+            current_score = f"{home_goals}-{away_goals}"
+
+            if goal_cache.get(key) == current_score:
+                continue
+
+            goal_cache[key] = current_score
+
+            text = f"""
+⚽ GOAL ALERT
+
+{home} vs {away}
+
+Score: {current_score}
+
+Match is LIVE
+"""
+
+            users = get_vip_users()
+
+            for uid,plan in users:
+
+                try:
+                    bot.send_message(uid,text)
+                except:
+                    pass
+
+        time.sleep(60)
+        
+# ───────────────────────────────────────
+# RESULT IMAGE SENDER
+# ───────────────────────────────────────
+
+def send_results_image(wins,losses):
+
+    img_path = "results.png"
+
+    caption = f"""
+🔥 VALUEHUNTER RESULTS
+
+{wins}/{wins+losses} WON TODAY
+"""
+
+    keyboard = InlineKeyboardMarkup()
+
+    keyboard.add(
+        InlineKeyboardButton(
+            "📊 View Result Summary",
+            callback_data="result_summary"
+        )
+    )
+
+    users = get_vip_users()
+
+    for uid,plan in users:
+
+        try:
+            bot.send_photo(
+                uid,
+                open(img_path,"rb"),
+                caption=caption,
+                reply_markup=keyboard
+            )
+        except:
+            pass
+
+# ───────────────────────────────────────
+# RESULT SUMMARY MENU
+# ───────────────────────────────────────
+
+def result_summary_text():
+
+    rows = cursor.execute(
+        "SELECT result FROM bets_history ORDER BY id DESC LIMIT 3"
+    ).fetchall()
+
+    wins = sum(1 for r in rows if r[0]=="WIN")
+    losses = sum(1 for r in rows if r[0]=="LOSE")
+
+    total = wins+losses
+
+    winrate = (wins/total)*100 if total else 0
+
+    return f"""
+📊 SIGNAL RESULT SUMMARY
+
+Bets: {total}
+Wins: {wins}
+Losses: {losses}
+
+Winrate: {round(winrate,1)}%
+"""
 
 # ╔══════════════════════════════════════════════════════════════╗
 # ║  PART 15 - THREADS & STARTUP                                ║
 # ╚══════════════════════════════════════════════════════════════╝
 
 threading.Thread(target=send_signals, daemon=True).start()
+
+threading.Thread(target=update_live_matches, daemon=True).start()
+
+threading.Thread(target=detect_goals, daemon=True).start()
 
 threading.Thread(
     target=lambda: app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8080))),
