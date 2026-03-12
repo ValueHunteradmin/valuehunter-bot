@@ -1577,51 +1577,7 @@ def rank_bet_score(bet_data):
     return round(score, 2)
 
 
-def build_elite_parlay(signals_data):
-    """Build a parlay from the top ranked signals."""
-    global parlay_cache, parlay_cache_time
-    if time.time() - parlay_cache_time < 900 and parlay_cache:
-        return parlay_cache
-    if not signals_data or len(signals_data) < 2:
-        return None
-    picks = signals_data[:min(3, len(signals_data))]
-    total_odds = 1.0
-    parlay_text = "🎰 𝑽𝑨𝑳𝑼𝑬𝑯𝑼𝑵𝑻𝑬𝑹 𝑬𝑳𝑰𝑻𝑬 𝑷𝑨𝑹𝑳𝑨𝒀\n\n"
-    for i, pick in enumerate(picks, 1):
-        ov = pick.get("odds", 1.50)
-        total_odds *= ov
-        parlay_text += f"{i}. {pick.get('match', '')}\n   {pick.get('pick', '')} @ {round(ov, 2)}\n\n"
-    parlay_text += f"━━━━━━━━━━━━━━\n💰 TOTAL ODDS: {round(total_odds, 2)}\n📊 Selections: {len(picks)}\n"
-    parlay_cache = parlay_text
-    parlay_cache_time = time.time()
-    return parlay_text
-
-
-def log_engine_event(event, detail=""):
-    """Log an engine event."""
-    global engine_log
-    entry = {"event": event, "detail": str(detail)[:200], "time": datetime.now(UTC).isoformat()}
-    engine_log.append(entry)
-    if len(engine_log) > 500:
-        engine_log = engine_log[-250:]
-    try:
-        with db_lock:
-            cursor.execute("INSERT INTO engine_logs(event,detail,timestamp) VALUES(?,?,?)",
-                (event, str(detail)[:200], int(time.time())))
-            db.commit()
-    except:
-        pass
-
-
-def get_marketing_message_gr():
-    """Return a random Greek/English mixed marketing message."""
-    return random.choice(MARKETING_MESSAGES_GR)
-
-
-def marketing_pre_signal_gr():
-    messages = [
-        "To ValueHunter model oloklirose tin analysi.\nTa signals etoimazontai.\n\nVIP members tha ta paroun stis 18:00.",
-        "Simera to engine evrike arketa value opportunities.\nTo pipeline filtrarε ta kalitera.\n\n18:00 signal release.",
+def build_parlay
         "Sharp money detected se Liga matches.\nOi odds idi metakinithikan.\n\nElite members etoimazontai.",
     ]
     return random.choice(messages)
@@ -1854,6 +1810,10 @@ def get_value_bets():
             )
             if not drift_pass:
                 continue
+                
+            # SuperSafe shield (soft)
+            if drift_direction == "against":
+                confidence *= 0.92
 
             # Edge calculation
             implied = implied_probability(odds_value)
@@ -1902,6 +1862,15 @@ def get_value_bets():
                 value_strength += 1
             if value_strength == 0:
                 continue
+                
+            # Model agreement boost
+            agreement_boost = 0
+
+            if value_strength >= 2:
+                agreement_boost = 3
+
+            if value_strength == 3:
+                agreement_boost = 5
 
             # CLV prediction
             clv_est = predict_clv(prob, odds_value, smart_money)
@@ -1910,6 +1879,9 @@ def get_value_bets():
             confidence, tier = calculate_confidence(
                 prob, ev, edge, odds_value, league_id, smart_money
             )
+            
+            # Apply model agreement boost
+            confidence += agreement_boost
 
             # Apply sharp book alignment penalty
             confidence = max(confidence - sharp_penalty, 0)
@@ -1986,11 +1958,42 @@ def get_value_bets():
     super_safe = None
     high_value = []
 
+    # Advanced SuperSafe selection
+    safe_candidates = []
+    safe_value_candidates = []
+
     for bet in filtered:
-        if bet["prob"] >= 0.63 and 1.60 <= bet["odds"] <= 1.90 and not super_safe:
-            super_safe = bet
-        elif bet["prob"] >= 0.60 and bet["odds"] <= 2.20:
-            high_value.append(bet)
+
+        confidence = bet.get("confidence", 0)
+
+        # ⭐ SUPER SAFE
+        if (
+            bet["prob"] >= 0.63
+            and 1.45 <= bet["odds"] <= 2.50
+            and bet["ev"] >= 0.05
+            and bet["clv_est"] >= 1
+            and confidence >= 75
+        ):
+            safe_candidates.append(bet)
+
+        # 🔥 SAFE VALUE
+        elif (
+            bet["prob"] >= 0.58
+            and 1.80 <= bet["odds"] <= 2.60
+            and bet["ev"] >= 0.04
+            and confidence >= 70
+        ):
+            safe_value_candidates.append(bet)
+
+    # Select best SuperSafe using ranking score
+    if safe_candidates:
+        safe_candidates.sort(key=lambda x: rank_bet_score(x), reverse=True)
+        super_safe = safe_candidates[0]
+        
+    # Rank Safe Value bets
+    safe_value_candidates.sort(key=lambda x: rank_bet_score(x), reverse=True)
+
+    high_value = safe_value_candidates[:2]
 
     signals = []
 
@@ -2111,7 +2114,11 @@ f"""⚠️ VALUE SCAN FALLBACK
 💰 Value {round(bet['ev'], 3)}
 """
             )
-
+    
+    # Build Parlay
+    global parlay_cache
+    parlay_cache = build_parlay(filtered[:3], candidates)
+    
     value_cache = signals
     value_cache_time = time.time()
     return signals
@@ -2149,6 +2156,118 @@ def rank_bet_score(bet):
 
     return score
     
+# ───────────────────────────────────────
+# 📊 MODEL STREAK CALCULATOR
+# Calculates wins in last 5 signals
+# ───────────────────────────────────────
+
+def get_model_streak():
+
+    rows = cursor.execute(
+        "SELECT result FROM bets_history WHERE result IN ('WIN','LOSE') ORDER BY id DESC LIMIT 5"
+    ).fetchall()
+
+    if not rows:
+        return "No recent data"
+
+    wins = sum(1 for r in rows if r[0] == "WIN")
+    total = len(rows)
+
+    return f"{wins} Wins in the last {total} signals"
+    
+# ───────────────────────────────────────
+# 🎰 ELITE PARLAY GENERATOR
+# Builds an 8-leg value parlay using
+# signal matches + additional value bets
+# ───────────────────────────────────────
+
+def build_parlay(signals_data, candidates):
+
+    parlay_legs = []
+
+    used_matches = set()
+
+    # 1️⃣ Use signal matches but different market
+    for bet in signals_data:
+        match = bet["match"]
+        used_matches.add(match)
+
+        alt_pick = f"Over 1.5 Goals"
+
+        if 1.35 <= bet["odds"] <= 2.20:
+            parlay_legs.append({
+                "match": match,
+                "pick": alt_pick,
+                "odds": round(min(bet["odds"],1.65),2)
+            })
+
+    # 2️⃣ Find extra matches
+    extra_candidates = []
+
+    for bet in candidates:
+
+        if bet["match"] in used_matches:
+            continue
+
+        if bet["odds"] < 1.40 or bet["odds"] > 1.65:
+            continue
+
+        if bet["prob"] < 0.58:
+            continue
+
+        if bet["edge"] < 0.03:
+            continue
+
+        extra_candidates.append(bet)
+
+    extra_candidates.sort(key=lambda x: rank_bet_score(x), reverse=True)
+
+    for bet in extra_candidates:
+
+        if len(parlay_legs) >= 8:
+            break
+
+        parlay_legs.append({
+            "match": bet["match"],
+            "pick": bet["pick"],
+            "odds": round(bet["odds"],2)
+        })
+
+    if len(parlay_legs) < 4:
+        return None
+
+    # ───────────────────────────────────────
+    # 🎰 ELITE PARLAY MESSAGE FORMAT
+    # ───────────────────────────────────────
+
+    text = "🎰 𝑽𝑨𝑳𝑼𝑬𝑯𝑼𝑵𝑻𝑬𝑹 𝑬𝑳𝑰𝑻𝑬 𝑷𝑨𝑹𝑳𝑨𝒀\n\n"
+
+    text += "💎 𝑬𝑳𝑰𝑻𝑬 𝑨𝑪𝑪𝑼𝑴𝑼𝑳𝑨𝑻𝑶𝑹\n"
+    text += "Model selected value positions across today's markets.\n\n"
+
+    total_odds = 1
+
+    for i, leg in enumerate(parlay_legs, start=1):
+
+        total_odds *= leg["odds"]
+
+        text += f"#{i}\n"
+        text += f"⚽ {leg['match']}\n"
+        text += f"🎯 {leg['pick']}\n"
+        text += f"📊 Odds {leg['odds']}\n\n"
+
+    text += "━━━━━━━━━━━━━━━━━━\n"
+
+    text += f"💰 𝑻𝑶𝑻𝑨𝑳 𝑶𝑫𝑫𝑺\n{round(total_odds,2)}\n\n"
+
+    text += "📡 𝑴𝑨𝑹𝑲𝑬𝑻 𝑵𝑶𝑻𝑬\n"
+    text += "These selections were identified by the ValueHunter model before major market movement.\n\n"
+
+    text += "👑 𝑽𝑨𝑳𝑼𝑬𝑯𝑼𝑵𝑻𝑬𝑹 𝑬𝑳𝑰𝑻𝑬\n"
+    text += "@ValueHunterElite_bot\n"
+
+    return text
+
 # ╔══════════════════════════════════════════════════════════════╗
 # ║  PART 8 - SIGNAL DELIVERY & RESULTS                         ║
 # ╚══════════════════════════════════════════════════════════════╝
@@ -2223,17 +2342,32 @@ def grade_results():
 def _send_win_notification(match, pick, odds):
     """Send win confirmation to VIP and teaser to free users."""
     message = f"""
-🎖️ 𝑾𝑰𝑵 𝑪𝑶𝑵𝑭𝑰𝑹𝑴𝑬𝑫
+🎖️ 𝑽𝑨𝑳𝑼𝑬𝑯𝑼𝑵𝑻𝑬𝑹 𝑬𝑳𝑰𝑻𝑬 𝑹𝑬𝑺𝑼𝑳𝑻
 
-⚽ {match}
-🎯 {pick}
-🚀 Odds {odds}
-━━━━━━━━━━━━━━
-🏆 𝑽𝑰𝑷 𝗠𝗘𝗠𝗕𝗘𝗥𝗦 𝗖𝗢𝗟𝗟𝗘𝗖𝗧𝗘𝗗 𝗔𝗡𝗢𝗧𝗛𝗘𝗥 𝗪𝗜𝗡 𝗧𝗢𝗗𝗔𝗬.
+🟢 𝗪𝗜𝗡𝗡𝗜𝗡𝗚 𝗦𝗜𝗚𝗡𝗔𝗟 𝗖𝗢𝗡𝗙𝗜𝗥𝗠𝗘𝗗
 
-📡 𝗡𝗘𝗫𝗧 𝗦𝗜𝗚𝗡𝗔𝗟𝗦 𝗥𝗘𝗟𝗘𝗔𝗦𝗘𝗗 𝗔𝗧 𝟭𝟴:𝟬𝟬
-• 𝗔𝗧𝗛𝗘𝗡𝗦 𝗧𝗜𝗠𝗘 🇬🇷
+⚽ {match}  
+🎯 {pick}  
+📈 Odds {odds}
 
+━━━━━━━━━━━━━━━━━━
+
+✅ 𝗩𝗜𝗣 𝗠𝗘𝗠𝗕𝗘𝗥𝗦 𝗖𝗢𝗟𝗟𝗘𝗖𝗧𝗘𝗗 𝗔𝗡𝗢𝗧𝗛𝗘𝗥 𝗪𝗜𝗡𝗡𝗜𝗡𝗚 𝗦𝗜𝗚𝗡𝗔𝗟.
+
+The ValueHunter model once again identified **hidden bookmaker value** before the market reacted.
+
+━━━━━━━━━━━━━━━━━━
+
+📡 𝗡𝗘𝗫𝗧 𝗦𝗜𝗚𝗡𝗔𝗟 𝗥𝗘𝗟𝗘𝗔𝗦𝗘  
+⏰ 18:00 — Athens Time 🇬🇷
+
+⚜️ 𝗩𝗜𝗣 𝗔𝗖𝗖𝗘𝗦𝗦 𝗧𝗢 𝗧𝗛𝗘  
+𝗩𝗔𝗟𝗨𝗘𝗛𝗨𝗡𝗧𝗘𝗥 𝗡𝗘𝗧𝗪𝗢𝗥𝗞  
+𝗠𝗔𝗬 𝗖𝗟𝗢𝗦𝗘 𝗔𝗙𝗧𝗘𝗥 𝗧𝗛𝗘 𝗡𝗘𝗫𝗧 𝗥𝗘𝗟𝗘𝗔𝗦𝗘.
+
+👑 Elite members are already preparing the next positions.
+
+💎 𝑶𝑭𝑭𝑰𝑪𝑰𝑨𝑳 𝑩𝑶𝑻: @ValueHunterElite_bot
 🔐 𝑺𝑼𝑷𝑷𝑶𝑹𝑻: @MrMasterlegacy1
 """
     users = get_vip_users()
