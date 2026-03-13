@@ -18,6 +18,9 @@ import json
 from urllib.parse import quote
 from io import BytesIO
 
+os.environ["TZ"] = "Europe/Athens"
+athens_tz = pytz.timezone("Europe/Athens")
+
 # ╔══════════════════════════════════════════════════════════════╗
 # ║  PART 1 - CORE CONFIG & CONSTANTS                          ║
 # ╚══════════════════════════════════════════════════════════════╝
@@ -692,7 +695,7 @@ def scan_matches():
         return fixtures_cache
 
     fixtures = []
-    today = datetime.now(UTC).date()
+    today = datetime.now(athens_tz).date()
     future = today + timedelta(days=3)
 
     url = f"https://v3.football.api-sports.io/fixtures?from={today}&to={future}"
@@ -714,10 +717,17 @@ def scan_matches():
         if status != "NS":
             continue
 
-        match_time = m["fixture"]["timestamp"]
+        match_time = datetime.fromisoformat(fixture["fixture"]["date"].replace("Z","+00:00"))
+        match_time = match_time.astimezone(athens_tz)
+        
+        time_diff = (match_time - now).total_seconds()
+        
+        utc_time = datetime.fromisoformat(match_time.replace("Z","+00:00"))
+        athens_time = utc_time.astimezone(athens_tz)
+        
         now = int(time.time())
 
-        if not (1800 <= match_time - now <= 259200):
+        if not (1800 <= time_diff <= 259200):
             continue
 
         fixtures.append({
@@ -3064,7 +3074,7 @@ def run_channel_automation():
                 posted_today.clear()
 
             # Morning (09:00-09:05)
-            if hour == 9 and minute <= 5 and "morning" not in posted_today:
+            if 9 <= hour < 10 and "morning" not in posted_today:
                 channel_post(channel_morning_message())
                 posted_today.add("morning")
 
@@ -3252,7 +3262,7 @@ def send_signals():
                     print("PRE-SCAN ERROR:", e)
 
             # ADMIN 17:00
-            if hour == 17 and minute <= 5 and not admin_sent_today:
+            if 17 <= hour < 18 and not admin_sent_today:
                 print("ADMIN SIGNAL TRIGGERED", now)
                 
                 daily_bets_cache = get_value_bets()
@@ -3334,6 +3344,9 @@ Our system scanned hundreds of matches and identified the strongest value opport
             # VIP 18:00
             if hour >= 18 and not vip_sent_today:
                 print("VIP SIGNAL TRIGGERED", now)
+                
+                if not daily_bets_cache:
+                    daily_bets_cache = get_value_bets()
                 
                 bets = daily_bets_cache
                 vip_sent_today = True
